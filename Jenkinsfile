@@ -137,26 +137,32 @@ stage('Install Ansible') {
 }
 
         stage('Configure Ansible Environment') {
-            steps {
-                sshagent(credentials: ['ssh-key-ansadmin']) {
-                    sh """
-                        # Configure inventory
-                        ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
-                            echo -e "[all]\\n${env.NODE_PRIVATE_IP}" | sudo tee /etc/ansible/hosts
-                            echo -e "[defaults]\\nhost_key_checking = False" | sudo tee /etc/ansible/ansible.cfg
-                        '
-                        
-                        # Setup SSH access to node
-                        ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} "
-                            ssh-keygen -t rsa -f ~/.ssh/id_rsa -N '' <<< y
-                            ssh-keyscan ${env.NODE_PRIVATE_IP} >> ~/.ssh/known_hosts
-                            ssh-copy-id ansadmin@${env.NODE_PRIVATE_IP}
-                        "
-                    """
-                }
-            }
+    steps {
+        sshagent(credentials: ['ssh-key-ansadmin']) {
+            sh """
+                # First create the Ansible directory structure
+                ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
+                    sudo mkdir -p /etc/ansible &&
+                    sudo chown ansadmin:ansadmin /etc/ansible
+                '
+                
+                # Now configure the files
+                ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} "
+                    echo -e '[all]\\n${env.NODE_PRIVATE_IP}' | sudo tee /etc/ansible/hosts
+                    echo -e '[defaults]\\nhost_key_checking = False' | sudo tee /etc/ansible/ansible.cfg
+                    sudo chmod 644 /etc/ansible/*
+                "
+                
+                # Verify the configuration
+                ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
+                    ls -la /etc/ansible/
+                    cat /etc/ansible/hosts
+                    cat /etc/ansible/ansible.cfg
+                '
+            """
         }
-
+    }
+}
         stage('Deploy Ansible Playbook') {
             steps {
                 sshagent(credentials: ['ssh-key-ansadmin']) {
