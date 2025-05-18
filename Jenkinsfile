@@ -59,6 +59,25 @@ pipeline {
             }
         }
 
+        stage('Create Ansible Inventory') {
+    steps {
+        script {
+            
+            def nodeIP = env.NODE_PRIVATE_IP
+
+            def inventoryContent = """
+
+            [node]
+            ${nodeIP} ansible_user=ansadmin
+            """
+
+            writeFile file: 'ansible/inventory/inventory.ini', text: inventoryContent
+            echo "Generated inventory.ini:\n${inventoryContent}"
+        }
+    }
+}
+
+
         stage('Configure Ansible on Master') {
             steps {
                 script {
