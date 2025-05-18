@@ -22,6 +22,23 @@ subnet_id = data.aws_subnets.selected.ids[0]
     Name = "${var.env}_master"
     Role = "master"
   }
+user_data = <<-EOF
+              #!/bin/bash
+              useradd -m -s /bin/bash ansadmin
+              echo 'ansadmin ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+              mkdir -p /home/ansadmin/.ssh
+              cp /home/ubuntu/.ssh/authorized_keys /home/ansadmin/.ssh/authorized_keys
+              chown -R ansadmin:ansadmin /home/ansadmin/.ssh
+              chmod 700 /home/ansadmin/.ssh
+              chmod 600 /home/ansadmin/.ssh/authorized_keys
+              apt update
+              apt install -y ansible
+            EOF
+
+  tags = {
+    Name = "master"
+  }
+}
 }
 
 resource "aws_instance" "node" {
