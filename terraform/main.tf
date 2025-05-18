@@ -35,9 +35,6 @@ user_data = <<-EOF
               apt install -y ansible
             EOF
 
-  tags = {
-    Name = "master"
-  }
 }
 }
 
