@@ -6,7 +6,7 @@ pipeline {
         TERRAFORM_DIR = 'terraform'
         ANSIBLE_DIR = 'ansible'
         IMAGE_NAME = 'finance-dev'
-        DOCKER_REGISTRY ='ashwinr2001/financedev18may2025capstone:v1'
+      DOCKER_REGISTRY = 'ashwinr2001/financedev18may2025capstone:v1'
     }
 
     stages {
@@ -16,7 +16,6 @@ pipeline {
             }
         }
 
-         stages {
         stage('Clone Repo') {
             steps {
                 git branch: 'dev', url: 'https://github.com/ashwinr200/Finance.git'
@@ -32,25 +31,27 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    dockerImage = docker.build("${DOCKER_REGISTRY}/${IMAGE_NAME}")
+                    sh "docker build -t ${DOCKER_REGISTRY} ."
                 }
             }
         }
 
-        stage('Push Docker Image') {
-            when {
-                expression { return env.DOCKER_REGISTRY != '' }
-            }
+        stage('Push to Docker Hub') {
             steps {
-                withDockerRegistry([credentialsId: 'dockerhub-creds-id', url: '']) {
-                    script {
-                        dockerImage.push('latest')
-                    }
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds-id', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                    sh """
+                        echo "$PASSWORD" | docker login -u "$USERNAME" --password-stdin
+                        docker push ${DOCKER_REGISTRY}
+                    """
                 }
+            }
+        }
+         stage('Run Container') {
+            steps {
+                sh 'docker run -d -p 2021:8080 $DOCKER_REGISTRY'
             }
         }
     }
-
         stage('Terraform Init') {
             steps {
                 dir(env.TERRAFORM_DIR) {
