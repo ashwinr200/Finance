@@ -3,7 +3,10 @@ pipeline {
 
     environment {
         AWS_DEFAULT_REGION = 'us-east-1'
-        TERRAFORM_DIR = 'terraform'  // change if needed
+        TERRAFORM_DIR = 'terraform'
+        ANSIBLE_DIR = 'ansible'
+        IMAGE_NAME = 'finance-dev'
+      DOCKER_REGISTRY = 'ashwinr2001/financedev18may2025capstone:v1'
     }
 
     stages {
@@ -13,89 +16,39 @@ pipeline {
             }
         }
 
-        stage('Terraform Init') {
+        stage('Clone Repo') {
             steps {
-                dir(env.TERRAFORM_DIR) {
-                    sh 'terraform init'
+                git branch: 'dev', url: 'https://github.com/ashwinr200/Finance.git'
+            }
+        }
+
+        stage('Build with Maven') {
+            steps {
+                sh 'mvn clean package'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    sh "docker build -t ${DOCKER_REGISTRY} ."
                 }
             }
         }
 
-        stage('Terraform Plan') {
+        stage('Push to Docker Hub') {
             steps {
-                script {
-                    def tfVarsFile = ''
-                    if (env.BRANCH_NAME == 'prod') {
-                        tfVarsFile = 'prod.tfvars'
-                    } else if (env.BRANCH_NAME == 'stage') {
-                        tfVarsFile = 'stage.tfvars'
-                    } else {
-                        error "Branch ${env.BRANCH_NAME} not supported"
-                    }
-                    dir(env.TERRAFORM_DIR) {
-                        sh "terraform plan -var-file=${tfVarsFile}"
-                    }
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds-id', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                    sh """
+                        echo "$PASSWORD" | docker login -u "$USERNAME" --password-stdin
+                        docker push ${DOCKER_REGISTRY}
+                    """
                 }
             }
         }
-
-        stage('Terraform Apply') {
+         stage('Run Container') {
             steps {
-                script {
-                    def tfVarsFile = ''
-                    def envName = ''
-                    if (env.BRANCH_NAME == 'prod') {
-                        tfVarsFile = 'prod.tfvars'
-                        envName = 'prod'
-                    } else if (env.BRANCH_NAME == 'stage') {
-                        tfVarsFile = 'stage.tfvars'
-                        envName = 'stage'
-                    }
-                    dir(env.TERRAFORM_DIR) {
-                        sh "terraform apply -auto-approve -var-file=${tfVarsFile}"
-
-                        // Capture outputs
-                        def masterPrivateIp = sh (
-                            script: "terraform output -raw master_private_ip_${envName}",
-                            returnStdout: true
-                        ).trim()
-
-                        def masterPublicIp = sh (
-                            script: "terraform output -raw master_public_ip_${envName}",
-                            returnStdout: true
-                        ).trim()
-
-                        def nodePrivateIp = sh (
-                            script: "terraform output -raw node_private_ip_${envName}",
-                            returnStdout: true
-                        ).trim()
-
-                        def nodePublicIp = sh (
-                            script: "terraform output -raw node_public_ip_${envName}",
-                            returnStdout: true
-                        ).trim()
-
-                        echo "Master Private IP: ${masterPrivateIp}"
-                        echo "Master Public IP: ${masterPublicIp}"
-                        echo "Node Private IP: ${nodePrivateIp}"
-                        echo "Node Public IP: ${nodePublicIp}"
-
-                        // You can save these to environment variables or pass to next stages if needed
-                        env.MASTER_PRIVATE_IP = masterPrivateIp
-                        env.MASTER_PUBLIC_IP = masterPublicIp
-                        env.NODE_PRIVATE_IP = nodePrivateIp
-                        env.NODE_PUBLIC_IP = nodePublicIp
-                    }
-                }
+                sh 'docker run -d -p 2021:8080 $DOCKER_REGISTRY'
             }
         }
     }
-
-    post {
-        failure {
-            mail to: 'you@example.com',
-                 subject: "Build failed in branch ${env.BRANCH_NAME}",
-                 body: "Terraform apply failed. Please check the Jenkins job."
-        }
-    }
-}
