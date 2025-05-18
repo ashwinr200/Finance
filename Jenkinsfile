@@ -163,6 +163,31 @@ stage('Install Ansible') {
         }
     }
 }
+
+        stage('Configure SSH Access') {
+    steps {
+        sshagent(credentials: ['ssh-key-ansadmin']) {
+            sh """
+                # Generate SSH key on master if not exists
+                ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
+                    [ ! -f ~/.ssh/id_rsa ] && ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
+                    chmod 600 ~/.ssh/id_rsa
+                '
+                
+                # Copy public key to worker node (using temporary password auth)
+                ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} "
+                    ssh-keyscan ${env.NODE_PRIVATE_IP} >> ~/.ssh/known_hosts
+                    sshpass -p 'ansadmin' ssh-copy-id -f -i ~/.ssh/id_rsa.pub ansadmin@${env.NODE_PRIVATE_IP}
+                "
+                
+                # Verify SSH connection
+                ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} "
+                    ssh -o StrictHostKeyChecking=no ansadmin@${env.NODE_PRIVATE_IP} 'hostname'
+                "
+            """
+        }
+    }
+}
         stage('Deploy Ansible Playbook') {
             steps {
                 sshagent(credentials: ['ssh-key-ansadmin']) {
