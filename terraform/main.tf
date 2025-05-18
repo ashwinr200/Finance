@@ -35,7 +35,7 @@ user_data = <<-EOF
               apt install -y ansible
             EOF
 
-}
+
 }
 
 resource "aws_instance" "node" {
