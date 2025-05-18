@@ -83,8 +83,7 @@ pipeline {
                     sshagent(credentials: ['ssh-key-ansadmin']) {
                         sh """
                             ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} \\
-                            "echo '[ansiblegroup]' | sudo tee /etc/ansible/hosts > /dev/null && \\
-                             echo '${env.NODE_PRIVATE_IP}' | sudo tee -a /etc/ansible/hosts > /dev/null"
+                            "echo -e '[ansiblegroup]\\n${env.NODE_PRIVATE_IP}' | sudo tee /etc/ansible/hosts > /dev/null"
                         """
                     }
                 }
