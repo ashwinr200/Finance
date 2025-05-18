@@ -1,15 +1,19 @@
-output "master_private_ip_${var.env}" {
-  value = aws_instance.master.private_ip
+output "node_public_ip" {
+  value       = aws_instance.node.public_ip
+  description = "Public IP of node in environment ${var.env}"
 }
 
-output "master_public_ip_${var.env}" {
-  value = aws_instance.master.public_ip
+output "node_private_ip" {
+  value       = aws_instance.node.private_ip
+  description = "Private IP of node in environment ${var.env}"
 }
 
-output "node_private_ip_${var.env}" {
-  value = aws_instance.node.private_ip
+output "master_public_ip" {
+  value       = aws_instance.master.public_ip
+  description = "Public IP of master in environment ${var.env}"
 }
 
-output "node_public_ip_${var.env}" {
-  value = aws_instance.node.public_ip
+output "master_private_ip" {
+  value       = aws_instance.master.private_ip
+  description = "Private IP of master in environment ${var.env}"
 }
