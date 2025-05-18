@@ -60,25 +60,26 @@ pipeline {
                             sh "terraform apply -auto-approve -var-file=${tfVarsFile}"
 
                             // Capture outputs
-                            def masterPrivateIp = sh (
-                                script: "terraform output -raw master_private_ip_${envName}",
-                                returnStdout: true
-                            ).trim()
+                           def masterPrivateIp = sh (
+    script: "terraform output -raw master_private_ip",
+    returnStdout: true
+).trim()
 
-                            def masterPublicIp = sh (
-                                script: "terraform output -raw master_public_ip_${envName}",
-                                returnStdout: true
-                            ).trim()
+                         def masterPublicIp = sh (
+    script: "terraform output -raw master_public_ip",
+    returnStdout: true
+).trim()
 
-                            def nodePrivateIp = sh (
-                                script: "terraform output -raw node_private_ip_${envName}",
-                                returnStdout: true
-                            ).trim()
+def nodePrivateIp = sh (
+    script: "terraform output -raw node_private_ip",
+    returnStdout: true
+).trim()
 
-                            def nodePublicIp = sh (
-                                script: "terraform output -raw node_public_ip_${envName}",
-                                returnStdout: true
-                            ).trim()
+def nodePublicIp = sh (
+    script: "terraform output -raw node_public_ip",
+    returnStdout: true
+).trim()
+
 
                             echo "Master Private IP: ${masterPrivateIp}"
                             echo "Master Public IP: ${masterPublicIp}"
