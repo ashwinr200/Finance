@@ -16,8 +16,8 @@ pipeline {
         stage('Terraform Init') {
             steps {
                 dir(env.TERRAFORM_DIR) {
-                    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]){
-                    sh 'terraform init'
+                    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+                        sh 'terraform init'
                     }
                 }
             }
@@ -35,7 +35,9 @@ pipeline {
                         error "Branch ${env.BRANCH_NAME} not supported"
                     }
                     dir(env.TERRAFORM_DIR) {
-                        sh "terraform plan -var-file=${tfVarsFile}"
+                        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+                            sh "terraform plan -var-file=${tfVarsFile}"
+                        }
                     }
                 }
             }
@@ -54,39 +56,41 @@ pipeline {
                         envName = 'stage'
                     }
                     dir(env.TERRAFORM_DIR) {
-                        sh "terraform apply -auto-approve -var-file=${tfVarsFile}"
+                        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+                            sh "terraform apply -auto-approve -var-file=${tfVarsFile}"
 
-                        // Capture outputs
-                        def masterPrivateIp = sh (
-                            script: "terraform output -raw master_private_ip_${envName}",
-                            returnStdout: true
-                        ).trim()
+                            // Capture outputs
+                            def masterPrivateIp = sh (
+                                script: "terraform output -raw master_private_ip_${envName}",
+                                returnStdout: true
+                            ).trim()
 
-                        def masterPublicIp = sh (
-                            script: "terraform output -raw master_public_ip_${envName}",
-                            returnStdout: true
-                        ).trim()
+                            def masterPublicIp = sh (
+                                script: "terraform output -raw master_public_ip_${envName}",
+                                returnStdout: true
+                            ).trim()
 
-                        def nodePrivateIp = sh (
-                            script: "terraform output -raw node_private_ip_${envName}",
-                            returnStdout: true
-                        ).trim()
+                            def nodePrivateIp = sh (
+                                script: "terraform output -raw node_private_ip_${envName}",
+                                returnStdout: true
+                            ).trim()
 
-                        def nodePublicIp = sh (
-                            script: "terraform output -raw node_public_ip_${envName}",
-                            returnStdout: true
-                        ).trim()
+                            def nodePublicIp = sh (
+                                script: "terraform output -raw node_public_ip_${envName}",
+                                returnStdout: true
+                            ).trim()
 
-                        echo "Master Private IP: ${masterPrivateIp}"
-                        echo "Master Public IP: ${masterPublicIp}"
-                        echo "Node Private IP: ${nodePrivateIp}"
-                        echo "Node Public IP: ${nodePublicIp}"
+                            echo "Master Private IP: ${masterPrivateIp}"
+                            echo "Master Public IP: ${masterPublicIp}"
+                            echo "Node Private IP: ${nodePrivateIp}"
+                            echo "Node Public IP: ${nodePublicIp}"
 
-                        // You can save these to environment variables or pass to next stages if needed
-                        env.MASTER_PRIVATE_IP = masterPrivateIp
-                        env.MASTER_PUBLIC_IP = masterPublicIp
-                        env.NODE_PRIVATE_IP = nodePrivateIp
-                        env.NODE_PUBLIC_IP = nodePublicIp
+                            // Save to environment variables if needed later
+                            env.MASTER_PRIVATE_IP = masterPrivateIp
+                            env.MASTER_PUBLIC_IP = masterPublicIp
+                            env.NODE_PRIVATE_IP = nodePrivateIp
+                            env.NODE_PUBLIC_IP = nodePublicIp
+                        }
                     }
                 }
             }
