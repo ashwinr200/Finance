@@ -54,6 +54,36 @@ apt-get install -y ansible-core ansible sshpass
 # Configure basic ansible settings
 mkdir -p /etc/ansible
 echo -e "[defaults]\nhost_key_checking = False" > /etc/ansible/ansible.cfg
+
+# Enable password authentication temporarily
+# PermitRootLogin yes
+if grep -q "^#*PermitRootLogin" /etc/ssh/sshd_config; then
+  sed -i 's/^#*PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+else
+  echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
+fi
+
+# PasswordAuthentication yes
+if grep -q "^#*PasswordAuthentication" /etc/ssh/sshd_config; then
+  sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+else
+  echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config
+fi
+
+# PubkeyAuthentication yes
+if grep -q "^#*PubkeyAuthentication" /etc/ssh/sshd_config; then
+  sed -i 's/^#*PubkeyAuthentication.*/PubkeyAuthentication yes/' /etc/ssh/sshd_config
+else
+  echo "PubkeyAuthentication yes" >> /etc/ssh/sshd_config
+fi
+
+if grep -q "^#*PasswordAuthentication" /etc/ssh/sshd_config.d/60-cloudimg-settings.conf; then
+  sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config.d/60-cloudimg-settings.conf
+else
+  echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config.d/60-cloudimg-settings.conf
+fi
+
+
 EOF
 }
 
@@ -78,11 +108,33 @@ echo "ansadmin:ansadmin" | chpasswd
 echo 'ansadmin ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/ansadmin
 
 # Enable password authentication temporarily
+# PermitRootLogin yes
+if grep -q "^#*PermitRootLogin" /etc/ssh/sshd_config; then
+  sed -i 's/^#*PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+else
+  echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
+fi
+
+# PasswordAuthentication yes
 if grep -q "^#*PasswordAuthentication" /etc/ssh/sshd_config; then
   sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
 else
   echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config
 fi
+
+# PubkeyAuthentication yes
+if grep -q "^#*PubkeyAuthentication" /etc/ssh/sshd_config; then
+  sed -i 's/^#*PubkeyAuthentication.*/PubkeyAuthentication yes/' /etc/ssh/sshd_config
+else
+  echo "PubkeyAuthentication yes" >> /etc/ssh/sshd_config
+fi
+
+if grep -q "^#*PasswordAuthentication" /etc/ssh/sshd_config.d/60-cloudimg-settings.conf; then
+  sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config.d/60-cloudimg-settings.conf
+else
+  echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config.d/60-cloudimg-settings.conf
+fi
+
 
 # Restart sshd
 systemctl restart sshd
