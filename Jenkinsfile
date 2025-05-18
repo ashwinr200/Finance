@@ -76,14 +76,23 @@ pipeline {
         }
     }
 }
-
+stage('Install Ansible') {
+      steps {
+        sshagent(credentials: ['ssh-key-ansadmin']) {
+          sh """
+            ssh -o StrictHostKeyChecking=no ansadmin@${MASTER_IP} '
+              curl -O https://raw.githubusercontent.com/ashwinr200/Finance/refs/heads/stage/ansible/install_ansible.sh &&
+              chmod +x install_ansible.sh &&
+              sudo ./install_ansible.sh
+            '
+          """
+        }
 
         stage('Configure Ansible on Master') {
             steps {
                 script {
                     sshagent(credentials: ['ssh-key-ansadmin']) {
                         sh """
-                            ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} 'sudo apt update && sudo apt install -y ansible'
 
                             scp -o StrictHostKeyChecking=no -r ansible/ ansadmin@${env.MASTER_PUBLIC_IP}:/home/ansadmin/
 
