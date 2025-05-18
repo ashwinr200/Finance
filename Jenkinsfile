@@ -109,3 +109,4 @@ stage('Configure Ansible on Master') {
         }
     }
 }
+}
