@@ -1,0 +1,15 @@
+---
+- name: Wait for join command file to be available on master (via shared location or copy manually)
+  pause:
+    seconds: 30
+
+- name: Copy join command script from master (or fetch by other means)
+  fetch:
+    src: /home/ansadmin/join_command.sh
+    dest: /tmp/join_command.sh
+    flat: yes
+
+- name: Run join command to join the cluster
+  shell: bash /tmp/join_command.sh
+  args:
+    creates: /etc/kubernetes/kubelet.conf

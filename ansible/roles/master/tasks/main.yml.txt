@@ -1,0 +1,20 @@
+---
+- name: Initialize Kubernetes master node
+  shell: kubeadm init --pod-network-cidr=10.244.0.0/16
+  args:
+    creates: /etc/kubernetes/admin.conf
+  register: kubeadm_init
+
+- name: Save join command to file
+  shell: |
+    echo "{{ kubeadm_init.stdout_lines | select('search', 'kubeadm join') | list | join(' ') }}" > /home/ansadmin/join_command.sh
+  when: kubeadm_init.changed
+
+- name: Setup kube config for ansadmin user
+  become_user: ansadmin
+  shell: |
+    mkdir -p $HOME/.kube
+    sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+    sudo chown $(id -u):$(id -g) $HOME/.kube/config
+  args:
+    executable: /bin/bash
