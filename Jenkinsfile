@@ -9,7 +9,7 @@ pipeline {
       DOCKER_REGISTRY = 'ashwinr2001/financedev18may2025capstone:v1'
     }
 
-    stages {
+ 
         stage('Checkout') {
             steps {
                 checkout scm
@@ -49,6 +49,13 @@ pipeline {
          stage('Run Container') {
             steps {
                 sh 'docker run -d -p 2021:8080 $DOCKER_REGISTRY'
+            }
+        }
+         stage('Deploy to Kubernetes via Ansible') {
+            steps {
+                sh '''
+                    ansible-playbook -i inventory.ini ansible-deploy.yml
+                '''
             }
         }
     }
