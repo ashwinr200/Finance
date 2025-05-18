@@ -86,62 +86,74 @@ pipeline {
                 }
             }
         }
-  stage('Verify SSH Access') {
-    steps {
-        sshagent(credentials: ['ssh-key-ansadmin']) {
-            // Test basic SSH connection
-            sh 'ssh -o StrictHostKeyChecking=no -v ansadmin@${env.MASTER_PUBLIC_IP} whoami'
-        }
-    }
-}
 
-      stage('Install and Configure Ansible') {
-    steps {
-        sshagent(credentials: ['ssh-key-ansadmin']) {
-            sh """
-                # Install Ansible on master
-                ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
-                    sudo apt-get update -qq &&
-                    sudo apt-get install -y software-properties-common &&
-                    sudo apt-add-repository --yes --update ppa:ansible/ansible &&
-                    sudo apt-get install -y ansible
-                '
-                
-                # Create Ansible directory structure
-                ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
-                    sudo mkdir -p /etc/ansible &&
-                    echo -e "[ansiblegroup]\\n${env.NODE_PRIVATE_IP}" | sudo tee /etc/ansible/hosts > /dev/null &&
-                    echo -e "[defaults]\\nhost_key_checking = False" | sudo tee /etc/ansible/ansible.cfg > /dev/null
-                '
-                
-                # Copy SSH key from master to worker node
-                ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} "
-                    ssh-keygen -t rsa -f /home/ansadmin/.ssh/id_rsa -N '' &&
-                    ssh-keyscan ${env.NODE_PRIVATE_IP} >> /home/ansadmin/.ssh/known_hosts &&
-                    ssh-copy-id -i /home/ansadmin/.ssh/id_rsa.pub ansadmin@${env.NODE_PRIVATE_IP}
-                "
-            """
+        stage('Provision Ansible Master') {
+            steps {
+                withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadmin', keyFileVariable: 'SSH_KEY')]) {
+                    script {
+                        def PUBLIC_KEY = sh(script: "ssh-keygen -y -f ${env.SSH_KEY}", returnStdout: true).trim()
+                        
+                        sh """
+                            # Configure ansadmin user on master
+                            ssh -o StrictHostKeyChecking=no -i ${env.SSH_KEY} ubuntu@${env.MASTER_PUBLIC_IP} '
+                                sudo useradd -m -s /bin/bash ansadmin || true
+                                echo "ansadmin ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/ansadmin
+                                sudo mkdir -p /home/ansadmin/.ssh
+                                echo "${PUBLIC_KEY}" | sudo tee /home/ansadmin/.ssh/authorized_keys
+                                sudo chown -R ansadmin:ansadmin /home/ansadmin/.ssh
+                                sudo chmod 700 /home/ansadmin/.ssh
+                                sudo chmod 600 /home/ansadmin/.ssh/authorized_keys
+                            '
+                        """
+                    }
+                }
+            }
         }
-    }
-}
-      
-        stage('Copy Ansible Playbook') {
+
+        stage('Install Ansible') {
             steps {
                 sshagent(credentials: ['ssh-key-ansadmin']) {
                     sh """
-                        scp -o StrictHostKeyChecking=no -r ${env.ANSIBLE_DIR}/ ansadmin@${env.MASTER_PUBLIC_IP}:/home/ansadmin/
+                        ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
+                            sudo apt-get update -qq
+                            sudo apt-get install -y software-properties-common
+                            sudo apt-add-repository --yes --update ppa:ansible/ansible
+                            sudo apt-get install -y ansible
+                        '
                     """
                 }
             }
         }
 
-        stage('Run Ansible Playbook') {
+        stage('Configure Ansible Environment') {
             steps {
                 sshagent(credentials: ['ssh-key-ansadmin']) {
                     sh """
+                        # Configure inventory
                         ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
-                            cd /home/ansadmin/${env.ANSIBLE_DIR} &&
-                            ansible-playbook install.yml -i /etc/ansible/hosts
+                            echo -e "[all]\\n${env.NODE_PRIVATE_IP}" | sudo tee /etc/ansible/hosts
+                            echo -e "[defaults]\\nhost_key_checking = False" | sudo tee /etc/ansible/ansible.cfg
+                        '
+                        
+                        # Setup SSH access to node
+                        ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} "
+                            ssh-keygen -t rsa -f ~/.ssh/id_rsa -N '' <<< y
+                            ssh-keyscan ${env.NODE_PRIVATE_IP} >> ~/.ssh/known_hosts
+                            ssh-copy-id ansadmin@${env.NODE_PRIVATE_IP}
+                        "
+                    """
+                }
+            }
+        }
+
+        stage('Deploy Ansible Playbook') {
+            steps {
+                sshagent(credentials: ['ssh-key-ansadmin']) {
+                    sh """
+                        scp -o StrictHostKeyChecking=no -r ${env.ANSIBLE_DIR}/ ansadmin@${env.MASTER_PUBLIC_IP}:/home/ansadmin/
+                        ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
+                            cd /home/ansadmin/${env.ANSIBLE_DIR}
+                            ansible-playbook -i /etc/ansible/hosts install.yml
                         '
                     """
                 }
@@ -162,7 +174,17 @@ pipeline {
         success {
             mail to: 'devops-team@example.com',
                  subject: "SUCCESS: Pipeline ${currentBuild.fullDisplayName}",
-                 body: "Deployment completed successfully!\n\nMaster IP: ${env.MASTER_PUBLIC_IP}\nNode IP: ${env.NODE_PUBLIC_IP}"
+                 body: """
+                 Deployment completed successfully!
+                 
+                 Master Node:
+                 - Public IP: ${env.MASTER_PUBLIC_IP}
+                 - Private IP: ${env.MASTER_PRIVATE_IP}
+                 
+                 Worker Node:
+                 - Public IP: ${env.NODE_PUBLIC_IP}
+                 - Private IP: ${env.NODE_PRIVATE_IP}
+                 """
         }
     }
 }
