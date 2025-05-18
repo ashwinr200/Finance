@@ -59,50 +59,47 @@ pipeline {
             }
         }
 
-        stage('Create Ansible Inventory') {
-    steps {
-        script {
-            
-            def nodeIP = env.NODE_PRIVATE_IP
-
-            def inventoryContent = """
-
-            [node]
-            ${nodeIP} ansible_user=ansadmin
-            """
-
-            writeFile file: 'ansible/inventory/inventory.ini', text: inventoryContent
-            echo "Generated inventory.ini:\n${inventoryContent}"
-        }
+   stage('Create Ansible Inventory') {
+  steps {
+    script {
+      sh 'mkdir -p ansible/inventory'
+      def nodeIP = env.NODE_PRIVATE_IP
+      def inventoryContent = """
+      [node]
+      ${nodeIP} ansible_user=ansadmin
+      """
+      writeFile file: 'ansible/inventory/inventory.ini', text: inventoryContent.trim()
+      echo "Generated inventory.ini:\n${inventoryContent}"
     }
+  }
 }
+
 stage('Install Ansible') {
-      steps {
-        sshagent(credentials: ['ssh-key-ansadmin']) {
-          sh """
-            ssh -o StrictHostKeyChecking=no ansadmin@${MASTER_IP} '
-              curl -O https://raw.githubusercontent.com/ashwinr200/Finance/refs/heads/stage/ansible/install_ansible.sh &&
-              chmod +x install_ansible.sh &&
-              sudo ./install_ansible.sh
-            '
-          """
-        }
-
-        stage('Configure Ansible on Master') {
-            steps {
-                script {
-                    sshagent(credentials: ['ssh-key-ansadmin']) {
-                        sh """
-
-                            scp -o StrictHostKeyChecking=no -r ansible/ ansadmin@${env.MASTER_PUBLIC_IP}:/home/ansadmin/
-
-                            ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} 'cd /home/ansadmin/ansible && ansible-playbook -i inventory/inventory.ini install.yml'
-                        """
-                    }
-                }
-            }
-        }
+  steps {
+    sshagent(credentials: ['ssh-key-ansadmin']) {
+      sh """
+        ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
+          curl -O https://raw.githubusercontent.com/ashwinr200/Finance/refs/heads/stage/ansible/install_ansible.sh &&
+          chmod +x install_ansible.sh &&
+          sudo ./install_ansible.sh
+        '
+      """
     }
+  }
+}
+
+stage('Configure Ansible on Master') {
+  steps {
+    script {
+      sshagent(credentials: ['ssh-key-ansadmin']) {
+        sh """
+          scp -o StrictHostKeyChecking=no -r ansible/ ansadmin@${env.MASTER_PUBLIC_IP}:/home/ansadmin/
+          ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} 'cd /home/ansadmin/ansible && ansible-playbook -i inventory/inventory.ini install.yml'
+        """
+      }
+    }
+  }
+}
 
     post {
         failure {
