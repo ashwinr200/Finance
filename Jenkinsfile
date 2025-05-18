@@ -3,15 +3,11 @@ pipeline {
 
     environment {
         AWS_DEFAULT_REGION = 'us-east-1'
-        TERRAFORM_DIR = 'terraform'  // change if needed
+        TERRAFORM_DIR = 'terraform'
     }
 
     stages {
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
+        stage('Checkout') { steps { checkout scm } }
 
         stage('Terraform Init') {
             steps {
@@ -27,13 +23,10 @@ pipeline {
             steps {
                 script {
                     def tfVarsFile = ''
-                    if (env.BRANCH_NAME == 'prod') {
-                        tfVarsFile = 'prod.tfvars'
-                    } else if (env.BRANCH_NAME == 'stage') {
-                        tfVarsFile = 'stage.tfvars'
-                    } else {
-                        error "Branch ${env.BRANCH_NAME} not supported"
-                    }
+                    if (env.BRANCH_NAME == 'prod') tfVarsFile = 'prod.tfvars'
+                    else if (env.BRANCH_NAME == 'stage') tfVarsFile = 'stage.tfvars'
+                    else error "Branch ${env.BRANCH_NAME} not supported"
+
                     dir(env.TERRAFORM_DIR) {
                         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
                             sh "terraform plan -var-file=${tfVarsFile}"
@@ -47,51 +40,36 @@ pipeline {
             steps {
                 script {
                     def tfVarsFile = ''
-                    def envName = ''
-                    if (env.BRANCH_NAME == 'prod') {
-                        tfVarsFile = 'prod.tfvars'
-                        envName = 'prod'
-                    } else if (env.BRANCH_NAME == 'stage') {
-                        tfVarsFile = 'stage.tfvars'
-                        envName = 'stage'
-                    }
+                    if (env.BRANCH_NAME == 'prod') tfVarsFile = 'prod.tfvars'
+                    else if (env.BRANCH_NAME == 'stage') tfVarsFile = 'stage.tfvars'
+
                     dir(env.TERRAFORM_DIR) {
                         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
                             sh "terraform apply -auto-approve -var-file=${tfVarsFile}"
 
-                            // Capture outputs
-                           def masterPrivateIp = sh (
-    script: "terraform output -raw master_private_ip",
-    returnStdout: true
-).trim()
+                            env.MASTER_PRIVATE_IP = sh(script: "terraform output -raw master_private_ip", returnStdout: true).trim()
+                            env.MASTER_PUBLIC_IP = sh(script: "terraform output -raw master_public_ip", returnStdout: true).trim()
+                            env.NODE_PRIVATE_IP = sh(script: "terraform output -raw node_private_ip", returnStdout: true).trim()
+                            env.NODE_PUBLIC_IP = sh(script: "terraform output -raw node_public_ip", returnStdout: true).trim()
 
-                         def masterPublicIp = sh (
-    script: "terraform output -raw master_public_ip",
-    returnStdout: true
-).trim()
-
-def nodePrivateIp = sh (
-    script: "terraform output -raw node_private_ip",
-    returnStdout: true
-).trim()
-
-def nodePublicIp = sh (
-    script: "terraform output -raw node_public_ip",
-    returnStdout: true
-).trim()
-
-
-                            echo "Master Private IP: ${masterPrivateIp}"
-                            echo "Master Public IP: ${masterPublicIp}"
-                            echo "Node Private IP: ${nodePrivateIp}"
-                            echo "Node Public IP: ${nodePublicIp}"
-
-                            // Save to environment variables if needed later
-                            env.MASTER_PRIVATE_IP = masterPrivateIp
-                            env.MASTER_PUBLIC_IP = masterPublicIp
-                            env.NODE_PRIVATE_IP = nodePrivateIp
-                            env.NODE_PUBLIC_IP = nodePublicIp
+                            echo "Master Public IP: ${env.MASTER_PUBLIC_IP}"
                         }
+                    }
+                }
+            }
+        }
+
+        stage('Configure Ansible on Master') {
+            steps {
+                script {
+                    sshagent(credentials: ['ssh-key-ansadmin']) {
+                        sh """
+                            ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} 'sudo apt update && sudo apt install -y ansible'
+
+                            scp -o StrictHostKeyChecking=no -r ansible/ ansadmin@${env.MASTER_PUBLIC_IP}:/home/ansadmin/
+
+                            ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} 'cd /home/ansadmin/ansible && ansible-playbook -i inventory/inventory.ini install.yml'
+                        """
                     }
                 }
             }
