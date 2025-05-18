@@ -87,28 +87,35 @@ pipeline {
             }
         }
 
-        stage('Install and Configure Ansible') {
-            steps {
-                sshagent(credentials: ['ssh-key-ansadmin']) {
-                    sh """
-                        # Install Ansible
-                        ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
-                            sudo apt-get update -qq &&
-                            sudo apt-get install -y software-properties-common &&
-                            sudo apt-add-repository --yes --update ppa:ansible/ansible &&
-                            sudo apt-get install -y ansible
-                        '
-                        
-                        # Create Ansible directory structure
-                        ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
-                            sudo mkdir -p /etc/ansible &&
-                            echo -e "[ansiblegroup]\\n${env.NODE_PRIVATE_IP}" | sudo tee /etc/ansible/hosts > /dev/null &&
-                            echo -e "[defaults]\\nhost_key_checking = False" | sudo tee /etc/ansible/ansible.cfg > /dev/null
-                        '
-                    """
-                }
-            }
+      stage('Install and Configure Ansible') {
+    steps {
+        sshagent(credentials: ['ssh-key-ansadmin']) {
+            sh """
+                # Install Ansible on master
+                ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
+                    sudo apt-get update -qq &&
+                    sudo apt-get install -y software-properties-common &&
+                    sudo apt-add-repository --yes --update ppa:ansible/ansible &&
+                    sudo apt-get install -y ansible
+                '
+                
+                # Create Ansible directory structure
+                ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
+                    sudo mkdir -p /etc/ansible &&
+                    echo -e "[ansiblegroup]\\n${env.NODE_PRIVATE_IP}" | sudo tee /etc/ansible/hosts > /dev/null &&
+                    echo -e "[defaults]\\nhost_key_checking = False" | sudo tee /etc/ansible/ansible.cfg > /dev/null
+                '
+                
+                # Copy SSH key from master to worker node
+                ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} "
+                    ssh-keygen -t rsa -f /home/ansadmin/.ssh/id_rsa -N '' &&
+                    ssh-keyscan ${env.NODE_PRIVATE_IP} >> /home/ansadmin/.ssh/known_hosts &&
+                    ssh-copy-id -i /home/ansadmin/.ssh/id_rsa.pub ansadmin@${env.NODE_PRIVATE_IP}
+                "
+            """
         }
+    }
+}
 
         stage('Copy Ansible Playbook') {
             steps {
