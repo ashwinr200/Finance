@@ -39,7 +39,7 @@ systemctl restart ssh
 echo "Switch to ansadmin and generate SSH keys..."
 su - ansadmin -c "
 if [ ! -f ~/.ssh/id_rsa ]; then
-  ssh-keygen -t rsa -N '' -f ~/.ssh/id_rsa
+  ssh-keygen -t rsa -b 4096 -N '' -f ~/.ssh/id_rsa
 fi
 "
 
