@@ -110,20 +110,31 @@ pipeline {
             }
         }
 
-        stage('Install Ansible') {
-            steps {
-                sshagent(credentials: ['ssh-key-ansadmin']) {
-                    sh """
-                        ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
-                            sudo apt-get update -qq
-                            sudo apt-get install -y software-properties-common
-                            sudo apt-add-repository --yes --update ppa:ansible/ansible
-                            sudo apt-get install -y ansible
-                        '
-                    """
-                }
-            }
+stage('Install Ansible') {
+    steps {
+        sshagent(credentials: ['ssh-key-ansadmin']) {
+            sh """
+                ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
+                    # Fix any broken packages first
+                    sudo apt-get update -qq
+                    sudo apt-get install -y --fix-broken
+                    sudo apt-get autoremove -y
+                    
+                    # Install prerequisites
+                    sudo apt-get install -y software-properties-common
+                    sudo apt-add-repository --yes --update ppa:ansible/ansible
+                    
+                    # Install Ansible with proper dependencies
+                    sudo apt-get update -qq
+                    sudo apt-get install -y ansible-core ansible sshpass
+                    
+                    # Verify installation
+                    ansible --version
+                '
+            """
         }
+    }
+}
 
         stage('Configure Ansible Environment') {
             steps {
