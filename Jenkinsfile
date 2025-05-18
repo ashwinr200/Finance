@@ -164,28 +164,27 @@ stage('Install Ansible') {
     }
 }
 
-  stage('Configure SSH Access') {
+ stage('Configure SSH Access') {
     steps {
-        withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadmin', keyFileVariable: 'SSH_KEY')]) {
-            sshagent(credentials: ['ssh-key-ansadmin']) {
-                sh """
-                    # 1. Generate SSH key on master if not exists
-                    ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ansadmin@${env.MASTER_PUBLIC_IP} '
-                        [ ! -f ~/.ssh/id_rsa ] && ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
-                        chmod 600 ~/.ssh/id_rsa
-                    '
+        sshagent(credentials: ['ssh-key-ansadmin']) {
+            sh """
+                # 1. Generate SSH key on master (from Jenkins)
+                ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
+                    [ ! -f ~/.ssh/id_rsa ] && ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
+                    chmod 600 ~/.ssh/id_rsa
+                '
 
-                    # 2. Prepare worker node for key-based auth
-                    ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ansadmin@${env.MASTER_PUBLIC_IP} "
-                        ssh-keyscan ${env.NODE_PRIVATE_IP} >> ~/.ssh/known_hosts
-                        sshpass -p 'ansadmin' ssh-copy-id -f -i ~/.ssh/id_rsa.pub ansadmin@${env.NODE_PRIVATE_IP}
-                        ssh -o StrictHostKeyChecking=no ansadmin@${env.NODE_PRIVATE_IP} 'echo "SSH connection successful!"'
-                    "
-                """
-            }
+                # 2. Add worker's private IP to known_hosts and copy key
+                ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} "
+                    ssh-keyscan ${env.NODE_PRIVATE_IP} >> ~/.ssh/known_hosts
+                    sshpass -p 'ansadmin' ssh-copy-id -f -i ~/.ssh/id_rsa.pub ansadmin@${env.NODE_PRIVATE_IP}
+                    ssh -o StrictHostKeyChecking=no ansadmin@${env.NODE_PRIVATE_IP} 'echo SSH connection successful!'
+                "
+            """
         }
     }
 }
+
 
         stage('Deploy Ansible Playbook') {
             steps {
