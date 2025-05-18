@@ -12,8 +12,7 @@ data "aws_subnets" "selected" {
 resource "aws_instance" "master" {
   ami                         = var.ami_id
   instance_type               = var.instance_type
-subnet_id = data.aws_subnets.selected.ids[0]
-
+  subnet_id                   = data.aws_subnets.selected.ids[0]
   vpc_security_group_ids      = [var.security_group_id]
   key_name                    = var.key_name
   associate_public_ip_address = true
@@ -22,27 +21,41 @@ subnet_id = data.aws_subnets.selected.ids[0]
     Name = "${var.env}_master"
     Role = "master"
   }
-user_data = <<-EOF
+
+  user_data = <<-EOF
               #!/bin/bash
+              # Create ansadmin user
               useradd -m -s /bin/bash ansadmin
-              echo 'ansadmin ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+              echo 'ansadmin ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/ansadmin
+              
+              # Configure SSH access
               mkdir -p /home/ansadmin/.ssh
-              cp /home/ubuntu/.ssh/authorized_keys /home/ansadmin/.ssh/authorized_keys
+              touch /home/ansadmin/.ssh/authorized_keys
+              if [ -f /home/ubuntu/.ssh/authorized_keys ]; then
+                cat /home/ubuntu/.ssh/authorized_keys >> /home/ansadmin/.ssh/authorized_keys
+              fi
+              
+              # Set proper permissions
               chown -R ansadmin:ansadmin /home/ansadmin/.ssh
               chmod 700 /home/ansadmin/.ssh
               chmod 600 /home/ansadmin/.ssh/authorized_keys
-              apt update
-              apt install -y ansible
-            EOF
-
-
+              
+              # Install Ansible and dependencies
+              apt-get update -y
+              apt-get install -y software-properties-common
+              apt-add-repository --yes --update ppa:ansible/ansible
+              apt-get install -y ansible sshpass
+              
+              # Configure basic ansible settings
+              mkdir -p /etc/ansible
+              echo -e "[defaults]\nhost_key_checking = False" > /etc/ansible/ansible.cfg
+              EOF
 }
 
 resource "aws_instance" "node" {
   ami                         = var.ami_id
   instance_type               = var.instance_type
- subnet_id = data.aws_subnets.selected.ids[0]
-
+  subnet_id                   = data.aws_subnets.selected.ids[0]
   vpc_security_group_ids      = [var.security_group_id]
   key_name                    = var.key_name
   associate_public_ip_address = true
@@ -51,4 +64,33 @@ resource "aws_instance" "node" {
     Name = "${var.env}_node"
     Role = "node"
   }
+
+  user_data = <<-EOF
+              #!/bin/bash
+              # Create ansadmin user with password
+              useradd -m -s /bin/bash ansadmin
+              echo "ansadmin:ansadmin" | chpasswd
+              echo 'ansadmin ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/ansadmin
+              
+              # Enable password authentication temporarily
+              sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+              systemctl restart sshd
+              EOF
+}
+
+# Outputs for Jenkins pipeline
+output "master_public_ip" {
+  value = aws_instance.master.public_ip
+}
+
+output "master_private_ip" {
+  value = aws_instance.master.private_ip
+}
+
+output "node_public_ip" {
+  value = aws_instance.node.public_ip
+}
+
+output "node_private_ip" {
+  value = aws_instance.node.private_ip
 }
