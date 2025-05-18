@@ -164,28 +164,29 @@ stage('Install Ansible') {
     }
 }
 
-    stage('Configure SSH Access') {
+  stage('Configure SSH Access') {
     steps {
-        script {
-            sh """
-                # 1. Generate SSH key on master
-                ssh -o StrictHostKeyChecking=no -i ${env.SSH_KEY} ansadmin@${env.MASTER_PUBLIC_IP} '
-                    [ ! -f ~/.ssh/id_rsa ] && ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
-                    chmod 600 ~/.ssh/id_rsa
-                '
+        withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadmin', keyFileVariable: 'SSH_KEY')]) {
+            sshagent(credentials: ['ssh-key-ansadmin']) {
+                sh """
+                    # 1. Generate SSH key on master if not exists
+                    ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ansadmin@${env.MASTER_PUBLIC_IP} '
+                        [ ! -f ~/.ssh/id_rsa ] && ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
+                        chmod 600 ~/.ssh/id_rsa
+                    '
 
-                # 2. Fetch public key
-                ssh -o StrictHostKeyChecking=no -i ${env.SSH_KEY} ansadmin@${env.MASTER_PUBLIC_IP} 'cat ~/.ssh/id_rsa.pub' > temp_key.pub
-
-                # 3. Copy key to node using sshpass (outside sshagent)
-                sshpass -p 'ansadmin' ssh-copy-id -o StrictHostKeyChecking=no -f -i temp_key.pub ansadmin@${env.NODE_PRIVATE_IP}
-
-                # 4. Test connection
-                ssh -o StrictHostKeyChecking=no -i ${env.SSH_KEY} ansadmin@${env.NODE_PRIVATE_IP} 'echo "SSH connection successful!"'
-            """
+                    # 2. Prepare worker node for key-based auth
+                    ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ansadmin@${env.MASTER_PUBLIC_IP} "
+                        ssh-keyscan ${env.NODE_PRIVATE_IP} >> ~/.ssh/known_hosts
+                        sshpass -p 'ansadmin' ssh-copy-id -f -i ~/.ssh/id_rsa.pub ansadmin@${env.NODE_PRIVATE_IP}
+                        ssh -o StrictHostKeyChecking=no ansadmin@${env.NODE_PRIVATE_IP} 'echo "SSH connection successful!"'
+                    "
+                """
+            }
         }
     }
 }
+
         stage('Deploy Ansible Playbook') {
             steps {
                 sshagent(credentials: ['ssh-key-ansadmin']) {
