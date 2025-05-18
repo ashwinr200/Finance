@@ -86,6 +86,14 @@ pipeline {
                 }
             }
         }
+  stage('Verify SSH Access') {
+    steps {
+        sshagent(credentials: ['ssh-key-ansadmin']) {
+            // Test basic SSH connection
+            sh 'ssh -o StrictHostKeyChecking=no -v ansadmin@${env.MASTER_PUBLIC_IP} whoami'
+        }
+    }
+}
 
       stage('Install and Configure Ansible') {
     steps {
@@ -116,15 +124,7 @@ pipeline {
         }
     }
 }
-        stage('Verify SSH Access') {
-    steps {
-        sshagent(credentials: ['ssh-key-ansadmin']) {
-            // Test basic SSH connection
-            sh 'ssh -o StrictHostKeyChecking=no -v ansadmin@${env.MASTER_PUBLIC_IP} whoami'
-        }
-    }
-}
-
+      
         stage('Copy Ansible Playbook') {
             steps {
                 sshagent(credentials: ['ssh-key-ansadmin']) {
