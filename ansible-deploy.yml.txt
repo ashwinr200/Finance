@@ -1,0 +1,6 @@
+---
+- name: Deploy Finance App on Kubernetes
+  hosts: all
+  become: true
+  roles:
+    - tasks
