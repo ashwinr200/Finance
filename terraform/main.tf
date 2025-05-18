@@ -70,15 +70,21 @@ resource "aws_instance" "node" {
     Role = "node"
   }
 
-  user_data = <<-EOF
-              #!/bin/bash
-              # Create ansadmin user with password
-              useradd -m -s /bin/bash ansadmin
-              echo "ansadmin:ansadmin" | chpasswd
-              echo 'ansadmin ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/ansadmin
-              
-              # Enable password authentication temporarily
-              sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
-              systemctl restart sshd
-              EOF
+   user_data = <<-EOF
+#!/bin/bash
+# Create ansadmin user with password
+useradd -m -s /bin/bash ansadmin
+echo "ansadmin:ansadmin" | chpasswd
+echo 'ansadmin ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/ansadmin
+
+# Enable password authentication temporarily
+if grep -q "^#*PasswordAuthentication" /etc/ssh/sshd_config; then
+  sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+else
+  echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config
+fi
+
+# Restart sshd
+systemctl restart sshd
+EOF
 }
