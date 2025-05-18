@@ -1,1 +1,10 @@
+---
+- name: Update APT repo
+  apt:
+    update_cache: yes
+
+- name: Install Git and Maven
+  apt:
+    name: ['git', 'maven']
+    state: present
 
