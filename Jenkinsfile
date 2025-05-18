@@ -5,6 +5,8 @@ pipeline {
         AWS_DEFAULT_REGION = 'us-east-1'
         TERRAFORM_DIR = 'terraform'
         ANSIBLE_DIR = 'ansible'
+        IMAGE_NAME = 'finance-dev'
+        DOCKER_REGISTRY ='ashwinr2001/financedev18may2025capstone:v1'
     }
 
     stages {
@@ -13,6 +15,41 @@ pipeline {
                 checkout scm
             }
         }
+
+         stages {
+        stage('Clone Repo') {
+            steps {
+                git branch: 'dev', url: 'https://github.com/ashwinr200/Finance.git'
+            }
+        }
+
+        stage('Build with Maven') {
+            steps {
+                sh 'mvn clean package'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    dockerImage = docker.build("${DOCKER_REGISTRY}/${IMAGE_NAME}")
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
+            when {
+                expression { return env.DOCKER_REGISTRY != '' }
+            }
+            steps {
+                withDockerRegistry([credentialsId: 'dockerhub-creds-id', url: '']) {
+                    script {
+                        dockerImage.push('latest')
+                    }
+                }
+            }
+        }
+    }
 
         stage('Terraform Init') {
             steps {
