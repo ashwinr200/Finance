@@ -1,4 +1,3 @@
----
 - name: Deploy Finance app via Kubernetes
   hosts: k8s-master
   become: true
