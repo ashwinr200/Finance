@@ -1,25 +1,20 @@
-- name: Deploy Finance app via Kubernetes
-  hosts: k8s-master
-  become: true
-  vars:
-    kube_config_path: /home/ansadmin/.kube/config
+- name: Copy Kubernetes deployment file to remote host
+  copy:
+    src: deployment.yaml
+    dest: /home/ansadmin/deployment.yaml
+    owner: ansadmin
+    mode: '0644'
 
-  tasks:
-    - name: Copy Kubernetes deployment file to remote host
-      copy:
-        src: deployment.yaml
-        dest: /home/ansadmin/deployment.yaml
-        owner: ansadmin
-        mode: '0644'
+- name: Ensure ansadmin has kube config
+  become: yes
+  shell: |
+    mkdir -p /home/ansadmin/.kube
+    cp -i /etc/kubernetes/admin.conf /home/ansadmin/.kube/config
+    chown ansadmin:ansadmin /home/ansadmin/.kube/config
+  args:
+    creates: /home/ansadmin/.kube/config
 
-    - name: Ensure ansadmin has kube config
-      shell: |
-        mkdir -p /home/ansadmin/.kube
-        cp -i /etc/kubernetes/admin.conf {{ kube_config_path }}
-        chown ansadmin:ansadmin {{ kube_config_path }}
-      args:
-        creates: "{{ kube_config_path }}"
-
-    - name: Apply Kubernetes deployment
-      become_user: ansadmin
-      shell: kubectl apply -f /home/ansadmin/deployment.yaml
+- name: Apply Kubernetes deployment
+  become: yes
+  become_user: ansadmin
+  shell: kubectl apply -f /home/ansadmin/deployment.yaml
