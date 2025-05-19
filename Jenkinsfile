@@ -4,8 +4,10 @@ pipeline {
     environment {
         AWS_DEFAULT_REGION = 'us-east-1'
         TERRAFORM_DIR = 'terraform'
-        IMAGE_NAME = 'finance-dev'
-        DOCKER_REGISTRY = 'ashwinr2001/financedev19may2025capstone:v1'
+        IMAGE_NAME = 'finance'
+        DOCKER_USER = 'ashwinr2001'
+        BRANCH_TAG = "${env.BRANCH_NAME}-${env.BUILD_NUMBER}".replaceAll('/', '-')
+        FULL_IMAGE = "${DOCKER_USER}/${IMAGE_NAME}:${BRANCH_TAG}"
     }
 
     stages {
@@ -29,7 +31,7 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh "docker build -t ${DOCKER_REGISTRY} ."
+                sh "docker build -t ${FULL_IMAGE} ."
             }
         }
 
@@ -38,23 +40,16 @@ pipeline {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-creds-id', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                     sh """
                         echo "$PASSWORD" | docker login -u "$USERNAME" --password-stdin
-                        docker push ${DOCKER_REGISTRY}
+                        docker push ${FULL_IMAGE}
                     """
                 }
             }
         }
 
-       stage('Deploy to Kubernetes via Ansible') {
-    steps {
-      
-            sh 'ansible-playbook -i /etc/ansible/hosts ansible-deploy.yml -b -u ansadmin'
-
-       
-
-        
-    }
-}
-
-
+        stage('Deploy to Kubernetes via Ansible') {
+            steps {
+                sh 'ansible-playbook -i /etc/ansible/hosts ansible-deploy.yml -b -u ansadmin'
+            }
+        }
     }
 }
