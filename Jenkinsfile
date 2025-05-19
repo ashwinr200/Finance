@@ -46,9 +46,14 @@ pipeline {
             }
         }
 
+        stages {
         stage('Deploy to Kubernetes via Ansible') {
             steps {
-                sh 'ansible-playbook -i /etc/ansible/hosts ansible-deploy.yml -b -u ansadmin'
+                withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadm', keyFileVariable: 'KEY')]) {
+                    sh '''
+                        ansible-playbook -i /etc/ansible/hosts ansible-deploy.yml -u ansadmin --private-key $KEY -b
+                    '''
+                }
             }
         }
     }
