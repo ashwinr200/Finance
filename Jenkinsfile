@@ -46,7 +46,7 @@ pipeline {
             }
         }
 
-        stages {
+
         stage('Deploy to Kubernetes via Ansible') {
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadm', keyFileVariable: 'KEY')]) {
@@ -58,4 +58,4 @@ pipeline {
         }
     }
 }
-}
+
