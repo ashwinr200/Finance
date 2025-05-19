@@ -1,6 +1,6 @@
 ---
 - name: Deploy Finance app via Kubernetes
-  hosts: ansiblegroup
+  hosts: k8s-master
   become: yes
   roles:
     - k8s-deploy
