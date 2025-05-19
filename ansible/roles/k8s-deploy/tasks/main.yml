@@ -6,6 +6,16 @@
     owner: ansadmin
     mode: '0644'
 
+- name: Ensure ansadmin has kube config
+  become: yes
+  shell: |
+    mkdir -p /home/ansadmin/.kube
+    cp -i /etc/kubernetes/admin.conf /home/ansadmin/.kube/config
+    chown ansadmin:ansadmin /home/ansadmin/.kube/config
+  args:
+    creates: /home/ansadmin/.kube/config
+
 - name: Apply Kubernetes deployment
+  become: yes
   become_user: ansadmin
   shell: kubectl apply -f /home/ansadmin/deployment.yaml
