@@ -45,17 +45,14 @@ pipeline {
             }
         }
 
-        stage('Deploy to Kubernetes via Ansible') {
+       stage('Deploy to Kubernetes via Ansible') {
     steps {
-        sh 'ansible-playbook -i /etc/ansible/hosts ansible-deploy.yml'
+        dir('ansible') {
+            sh 'ansible-playbook -i /etc/ansible/hosts ansible-deploy.yml'
+        }
     }
 }
 
-stage('Apply Kubernetes Manifest') {
-    steps {
-        sh 'kubectl apply -f deployment.yaml'
-    }
-}
 
     }
 }
