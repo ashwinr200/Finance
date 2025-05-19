@@ -3,4 +3,4 @@
   hosts: ansiblegroup
   become: yes
   roles:
-    - k8s_deploy
+    - k8s-deploy
