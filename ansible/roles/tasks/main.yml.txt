@@ -1,9 +1,0 @@
----
-- name: Copy Kubernetes deployment file
-  copy:
-    src: deployment.yaml
-    dest: /home/ansadmin/deployment.yaml
-
-- name: Deploy Finance App to Kubernetes
-  become: true
-  shell: kubectl apply -f /home/ansadmin/deployment.yaml
