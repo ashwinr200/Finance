@@ -47,7 +47,10 @@ pipeline {
        stage('Deploy to Kubernetes via Ansible') {
     steps {
       
-            sh 'ansible-playbook -i /etc/ansible/hosts --roles-path=ansible/roles ansible-deploy.yml'
+            sh 'ansible-playbook -i /etc/ansible/hosts ansible-deploy.yml -b -u ansadmin'
+
+       
+
         
     }
 }
