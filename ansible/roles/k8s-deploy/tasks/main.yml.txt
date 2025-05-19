@@ -1,0 +1,11 @@
+---
+- name: Copy Kubernetes deployment file to remote host
+  copy:
+    src: deployment.yaml
+    dest: /home/ansadmin/deployment.yaml
+    owner: ansadmin
+    mode: '0644'
+
+- name: Apply Kubernetes deployment
+  become_user: ansadmin
+  shell: kubectl apply -f /home/ansadmin/deployment.yaml
