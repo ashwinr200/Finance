@@ -1,16 +1,6 @@
 ---
-- name: Deploy Finance App to Kubernetes
+- name: Deploy Finance app via Kubernetes
   hosts: ansiblegroup
   become: yes
-
-  tasks:
-    - name: Copy Kubernetes deployment file
-      copy:
-        src: deployment.yaml   # file path relative to where you run ansible-playbook
-        dest: /home/ansadmin/deployment.yaml
-        owner: ansadmin
-        mode: '0644'
-
-    - name: Deploy app using kubectl
-      become_user: ansadmin
-      shell: kubectl apply -f /home/ansadmin/deployment.yaml
+  roles:
+    - k8s_deploy
