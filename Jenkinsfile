@@ -4,7 +4,6 @@ pipeline {
     environment {
         AWS_DEFAULT_REGION = 'us-east-1'
         TERRAFORM_DIR = 'terraform'
-        ANSIBLE_DIR = 'ansible'
         IMAGE_NAME = 'finance-dev'
         DOCKER_REGISTRY = 'ashwinr2001/financedev19may2025capstone:v1'
     }
@@ -47,9 +46,9 @@ pipeline {
 
        stage('Deploy to Kubernetes via Ansible') {
     steps {
-        dir('ansible') {
+      
             sh 'ansible-playbook -i /etc/ansible/hosts ansible-deploy.yml'
-        }
+        
     }
 }
 
