@@ -6,7 +6,7 @@ pipeline {
         TERRAFORM_DIR = 'terraform'
         ANSIBLE_DIR = 'ansible'
         IMAGE_NAME = 'finance-dev'
-        DOCKER_REGISTRY = 'ashwinr2001/financedev18may2025capstone:v1'
+        DOCKER_REGISTRY = 'ashwinr2001/financedev19may2025capstone:v1'
     }
 
     stages {
@@ -45,18 +45,17 @@ pipeline {
             }
         }
 
-        stage('Run Container') {
-            steps {
-                sh "docker run -d -p 2021:8080 ${DOCKER_REGISTRY}"
-            }
-        }
-
         stage('Deploy to Kubernetes via Ansible') {
-            steps {
-                dir('hosts') {
-                    sh 'ansible-playbook -i inventory.ini ansible-deploy.yml'
-                }
-            }
-        }
+    steps {
+        sh 'ansible-playbook -i /etc/ansible/hosts ansible-deploy.yml'
+    }
+}
+
+stage('Apply Kubernetes Manifest') {
+    steps {
+        sh 'kubectl apply -f deployment.yaml'
+    }
+}
+
     }
 }
