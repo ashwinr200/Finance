@@ -54,7 +54,7 @@ pipeline {
                                 inventory: '/etc/ansible/hosts', 
                                 playbook: 'ansible-deploy.yml', 
                                 vaultTmpPath: ''
-            }
+            }  }
     }
 }
 
