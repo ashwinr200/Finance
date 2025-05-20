@@ -5,14 +5,22 @@
     owner: ansadmin
     mode: '0644'
 
-- name: Ensure ansadmin has kube config
+- name: Ensure ansadmin has kube config directory
+  file:
+    path: /home/ansadmin/.kube
+    state: directory
+    owner: ansadmin
+    mode: '0700'
+
+- name: Copy admin.conf to ansadmin kube config
   become: yes
-  shell: |
-    mkdir -p /home/ansadmin/.kube
-    cp -i /etc/kubernetes/admin.conf /home/ansadmin/.kube/config
-    chown ansadmin:ansadmin /home/ansadmin/.kube/config
-  args:
-    creates: /home/ansadmin/.kube/config
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /home/ansadmin/.kube/config
+    owner: ansadmin
+    group: ansadmin
+    mode: '0644'
+  when: ansible_facts['os_family'] == 'Debian'  # optional, adjust per your environment
 
 - name: Apply Kubernetes deployment
   become: yes
