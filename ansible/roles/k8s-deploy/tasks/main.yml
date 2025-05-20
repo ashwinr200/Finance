@@ -1,29 +1,29 @@
-# roles/k8s-deploy/tasks/main.yml
-- name: Copy deployment file to remote host
+- name: Copy deployment.yaml to all nodes
   copy:
     src: deployment.yaml
     dest: /home/ansadmin/deployment.yaml
     owner: ansadmin
     mode: '0644'
 
-- name: Ensure kube config dir on master
+- name: Ensure kube config directory on master only
   file:
     path: /home/ansadmin/.kube
     state: directory
     owner: ansadmin
     mode: '0700'
-  when: inventory_hostname == '172.31.19.21'
+  when: inventory_hostname == "172.31.19.21"
 
-- name: Copy admin.conf to ansadmin kube config on master
+- name: Copy admin.conf to kube config on master only
   become: yes
-  shell: |
-    cp /etc/kubernetes/admin.conf /home/ansadmin/.kube/config
-    chown ansadmin:ansadmin /home/ansadmin/.kube/config
-  args:
-    creates: /home/ansadmin/.kube/config
-  when: inventory_hostname == '172.31.19.21'
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /home/ansadmin/.kube/config
+    owner: ansadmin
+    mode: '0600'
+  when: inventory_hostname == "172.31.19.21"
 
-- name: Apply Kubernetes deployment
+- name: Apply deployment on master only
   become: yes
   become_user: ansadmin
   shell: kubectl apply -f /home/ansadmin/deployment.yaml
+  when: inventory_hostname == "172.31.19.21"
