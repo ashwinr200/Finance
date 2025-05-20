@@ -1,29 +1,44 @@
-- name: Copy Kubernetes deployment file to remote host
-  copy:
-    src: deployment.yaml
-    dest: /home/ansadmin/deployment.yaml
-    owner: ansadmin
-    mode: '0644'
-
-- name: Ensure ansadmin has kube config directory
-  file:
-    path: /home/ansadmin/.kube
-    state: directory
-    owner: ansadmin
-    mode: '0700'
-
-- name: Copy admin.conf to ansadmin kube config
+- name: Deploy Kubernetes resources on master node
+  hosts: 172.31.19.21   # master node
   become: yes
-  shell: |
-    mkdir -p /home/ansadmin/.kube
-    cp /etc/kubernetes/admin.conf /home/ansadmin/.kube/config
-    chown ansadmin:ansadmin /home/ansadmin/.kube/config
-  args:
-    creates: /home/ansadmin/.kube/config
+  tasks:
+    - name: Copy Kubernetes deployment file to remote host
+      copy:
+        src: deployment.yaml
+        dest: /home/ansadmin/deployment.yaml
+        owner: ansadmin
+        mode: '0644'
+
+    - name: Ensure ansadmin has kube config directory
+      file:
+        path: /home/ansadmin/.kube
+        state: directory
+        owner: ansadmin
+        mode: '0700'
+
+    - name: Copy admin.conf to ansadmin kube config
+      shell: |
+        cp /etc/kubernetes/admin.conf /home/ansadmin/.kube/config
+        chown ansadmin:ansadmin /home/ansadmin/.kube/config
+      args:
+        creates: /home/ansadmin/.kube/config
+
+    - name: Apply Kubernetes deployment
+      become_user: ansadmin
+      shell: kubectl apply -f /home/ansadmin/deployment.yaml
 
 
-
-- name: Apply Kubernetes deployment
+- name: Deploy Kubernetes resources on worker node (if needed)
+  hosts: 172.31.94.193  # worker node
   become: yes
-  become_user: ansadmin
-  shell: kubectl apply -f /home/ansadmin/deployment.yaml
+  tasks:
+    - name: Copy Kubernetes deployment file to remote host
+      copy:
+        src: deployment.yaml
+        dest: /home/ansadmin/deployment.yaml
+        owner: ansadmin
+        mode: '0644'
+
+    - name: Apply Kubernetes deployment
+      become_user: ansadmin
+      shell: kubectl apply -f /home/ansadmin/deployment.yaml
