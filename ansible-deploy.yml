@@ -1,6 +1,8 @@
 ---
-- name: Deploy to Kubernetes via Ansible Role
-  hosts: all
+- name: Deploy Kubernetes resources
+  hosts:
+    - 172.31.19.21
+    - 172.31.94.193
   become: yes
   roles:
     - k8s-deploy
