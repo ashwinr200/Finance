@@ -55,6 +55,16 @@ pipeline {
                                 playbook: 'ansible-deploy.yml', 
                                 vaultTmpPath: ''
             }  }
+
+        post {
+  failure {
+    emailext (
+      to: 'azureashwin25@gmail.com',
+      subject: "Jenkins Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+      body: "Check Jenkins console output at ${env.BUILD_URL}"
+    )
+  }
+}
     }
 }
 
