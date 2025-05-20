@@ -21,6 +21,11 @@
     owner: ansadmin
     mode: '0600'
   when: inventory_hostname == "172.31.19.21"
+  
+- name: Debug inventory hostname
+  debug:
+    var: inventory_hostname
+
 
 - name: Apply deployment on master only
   become: yes
