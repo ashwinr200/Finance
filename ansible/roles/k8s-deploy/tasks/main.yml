@@ -14,12 +14,13 @@
 
 - name: Copy admin.conf to ansadmin kube config
   become: yes
-  copy:
-    src: /etc/kubernetes/admin.conf
-    dest: /home/ansadmin/.kube/config
-    owner: ansadmin
-    group: ansadmin
-    mode: '0644'
+  shell: |
+    mkdir -p /home/ansadmin/.kube
+    cp /etc/kubernetes/admin.conf /home/ansadmin/.kube/config
+    chown ansadmin:ansadmin /home/ansadmin/.kube/config
+  args:
+    creates: /home/ansadmin/.kube/config
+
 
 
 - name: Apply Kubernetes deployment
