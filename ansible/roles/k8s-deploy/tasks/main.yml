@@ -1,34 +1,36 @@
 - name: Copy deployment.yaml to all nodes
-  copy:
-    src: deployment.yml
-    dest: /home/ansadmin/deployment.yaml
-    owner: ansadmin
-    mode: '0644'
-
-- name: Ensure kube config directory on master only
-  file:
-    path: /home/ansadmin/.kube
-    state: directory
-    owner: ansadmin
-    mode: '0700'
-  when: inventory_hostname == "172.31.19.21"
-
-- name: Copy admin.conf to kube config on master only
+  hosts: all
   become: yes
-  copy:
-    src: /etc/kubernetes/admin.conf
-    dest: /home/ansadmin/.kube/config
-    owner: ansadmin
-    mode: '0600'
-  when: inventory_hostname == "172.31.19.21"
-  
-- name: Debug inventory hostname
-  debug:
-    var: inventory_hostname
+  tasks:
+    - name: Copy deployment.yaml
+      copy:
+        src: deployment.yml
+        dest: /home/ansadmin/deployment.yaml
+        owner: ansadmin
+        mode: '0644'
 
-
-- name: Apply deployment on master only
+- name: Apply deployment only on master
+  hosts: master
   become: yes
-  become_user: ansadmin
-  shell: kubectl apply -f /home/ansadmin/deployment.yaml
-  when: inventory_hostname == "172.31.19.21"
+  tasks:
+    - name: Ensure kube config directory
+      file:
+        path: /home/ansadmin/.kube
+        state: directory
+        owner: ansadmin
+        mode: '0700'
+
+    - name: Copy admin.conf to kube config
+      copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /home/ansadmin/.kube/config
+        owner: ansadmin
+        mode: '0600'
+
+    - name: Debug inventory hostname
+      debug:
+        var: inventory_hostname
+
+    - name: Apply deployment with kubectl
+      become_user: ansadmin
+      shell: kubectl apply -f /home/ansadmin/deployment.yaml
