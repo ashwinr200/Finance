@@ -1,6 +1,6 @@
 ---
 - name: Deploy to Kubernetes via Ansible Role
-  hosts: masters
+  hosts: all
   become: yes
   roles:
     - { role: ansible.roles.k8s-deploy }
