@@ -20,7 +20,7 @@
     owner: ansadmin
     group: ansadmin
     mode: '0644'
-  when: ansible_facts['os_family'] == 'Debian'  # optional, adjust per your environment
+
 
 - name: Apply Kubernetes deployment
   become: yes
