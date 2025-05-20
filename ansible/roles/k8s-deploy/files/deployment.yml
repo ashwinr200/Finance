@@ -18,7 +18,7 @@ spec:
       - name: finance-container
         image: ashwinr2001/finance:dev-18
         ports:
-        - containerPort: 8080
+        - containerPort: 8081
 ---
 apiVersion: v1
 kind: Service
@@ -29,7 +29,7 @@ spec:
     app: finance
   ports:
     - protocol: TCP
-      port: 8080         # Cluster-internal port
-      targetPort: 8080   # Container port
+      port: 8081         # Cluster-internal port
+      targetPort: 8081   # Container port
       nodePort: 30000     # External port on EC2 host
   type: NodePort
