@@ -1,6 +1,6 @@
 - name: Copy deployment.yaml to all nodes
   copy:
-    src: deployment.yaml
+    src: roles/k8s-deploy/deployment.yml
     dest: /home/ansadmin/deployment.yaml
     owner: ansadmin
     mode: '0644'
