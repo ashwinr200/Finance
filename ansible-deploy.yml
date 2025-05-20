@@ -3,4 +3,4 @@
   hosts: masters
   become: yes
   roles:
-    - { role: ansible.roles.k8s_deploy }
+    - { role: ansible.roles.k8s-deploy }
