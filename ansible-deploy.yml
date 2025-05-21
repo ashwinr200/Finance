@@ -3,5 +3,7 @@
   hosts: localhost
   connection: local
   become: yes  # Stay root, don't switch users
+  vars:
+    build_tag: "{{ lookup('env','BUILD_TAG') | default('latest') }}"
   roles:
     - k8s-deploy
