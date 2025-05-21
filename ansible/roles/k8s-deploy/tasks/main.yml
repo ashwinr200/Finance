@@ -3,4 +3,4 @@
 
 
 - name: Deploy app using kubectl
-  shell: kubectl apply -f /var/lib/jenkins/workspace/Finance-Project_dev/ansible/roles/k8s-deploy/files/deployment.yml
+  shell: kubectl apply -f /var/lib/jenkins/workspace/Finance-Project_dev/ansible/roles/k8s-deploy/files/deployment.yml --set image.tag={{ build_tag }}
