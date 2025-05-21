@@ -54,6 +54,10 @@ pipeline {
                                 inventory: '/etc/ansible/hosts', 
                                 playbook: 'ansible-deploy.yml', 
                                 vaultTmpPath: ''
+                extraVars: [
+                            build_tag: "${BRANCH_TAG}",
+                            image_name: "${FULL_IMAGE}"
+                        ]
             }  }
 
 
