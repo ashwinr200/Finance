@@ -1,0 +1,10 @@
+✅ After Master Setup:
+On master, run:
+
+
+kubeadm token create --print-join-command
+Append this to the command:
+
+
+--cri-socket unix:///var/run/cri-dockerd.sock
+Then paste the full join command in each node terminal.
