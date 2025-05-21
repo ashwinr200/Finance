@@ -1,8 +1,6 @@
 ---
 - name: Deploy Kubernetes resources
-  hosts:
-    - 172.31.19.21
-    - 172.31.94.193
+  hosts:all
   become: yes
   roles:
     - k8s-deploy
