@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: finance-container
-        image: ashwinr2001/finance:dev-18
+        image: ashwinr2001/finance:latest
         ports:
         - containerPort: 8081
 ---
