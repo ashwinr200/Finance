@@ -1,20 +1,6 @@
 # tasks/main.yml
 
-- name: Ensure kube config directory exists
-  file:
-    path: /home/ansadmin/.kube
-    state: directory
-    mode: '0700'
-    owner: ansadmin
-    group: ansadmin
 
-- name: Copy admin.conf to .kube/config
-  copy:
-    src: /etc/kubernetes/admin.conf
-    dest: /home/ansadmin/.kube/config
-    owner: ansadmin
-    group: ansadmin
-    mode: '0600'
 
 - name: Deploy app using kubectl
   shell: kubectl apply -f /var/lib/jenkins/workspace/Finance-Project_dev/deployment.yaml
