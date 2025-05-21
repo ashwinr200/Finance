@@ -16,7 +16,8 @@ echo "PasswordAuthentication yes" > /etc/ssh/sshd_config.d/60-cloudimg-settings.
 service ssh restart
 
 # Step 3: Grant sudo access to ansadmin
-echo "ansadmin ALL=(ALL:ALL) NOPASSWD:ALL" >> /etc/sudoers
+echo "ansadmin ALL=(ALL:ALL) NOPASSWD:ALL" | sudo EDITOR='tee -a' visudo
+
 
 echo "==== Node setup complete ===="
 echo "Ready to accept SSH key from Ansible master (ansadmin)"
