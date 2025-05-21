@@ -1,3 +1,49 @@
+1. Generate SSH key pair (if not already generated) on jenkins
+bash
+Copy
+Edit
+ssh-keygen -t rsa -b 2048 -f ~/.ssh/id_rsa -N ""
+Generates private key ~/.ssh/id_rsa
+
+Generates public key ~/.ssh/id_rsa.pub
+
+No passphrase (-N "")
+
+2. Copy the public key to your Ansible nodes
+Replace ansadmin@<IP> with your user and target IP:
+
+bash
+Copy
+Edit
+ssh-copy-id -i ~/.ssh/id_rsa.pub ansadmin@172.31.83.82
+ssh-copy-id -i ~/.ssh/id_rsa.pub ansadmin@172.31.91.217
+You’ll be prompted for the password of ansadmin user on those nodes.
+
+3. Verify SSH access without password
+bash
+Copy
+Edit
+ssh -i ~/.ssh/id_rsa ansadmin@172.31.83.82
+ssh -i ~/.ssh/id_rsa ansadmin@172.31.91.217
+You should be able to log in without a password prompt.
+
+4. Run Ansible with the private key
+bash
+Copy
+Edit
+ansible all -i /etc/ansible/hosts -u ansadmin --private-key=~/.ssh/id_rsa -m ping
+If you want, I can help you write a script to automate these steps!
+
+
+
+
+
+
+
+
+
+
+
 su - ansadmin
 ssh-copy-id ansadmin@<node1_private_ip>
 ssh-copy-id ansadmin@<node2_private_ip>
