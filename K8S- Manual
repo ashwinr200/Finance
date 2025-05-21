@@ -31,3 +31,11 @@ ansible_user=ansadmin
 [local]
 localhost ansible_connection=local ansible_user=ansadmin
 
+ot@ip-172-31-83-82:/var/lib/jenkins/workspace/Finance-Project_dev#  vi ansible.cfg
+
+
+[defaults]
+roles_path = ./ansible/roles
+host_key_checking = False
+~
+
