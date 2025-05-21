@@ -31,5 +31,5 @@ spec:
     - protocol: TCP
       port: 8081         # Cluster-internal port
       targetPort: 8081   # Container port
-      nodePort: 31250     # External port on EC2 host
+      nodePort: 30000     # External port on EC2 host
   type: NodePort
