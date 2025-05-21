@@ -1,6 +1,6 @@
 ---
 - name: Deploy Kubernetes resources
-  hosts:all
+  hosts: k8s-master
   become: yes
   roles:
     - k8s-deploy
