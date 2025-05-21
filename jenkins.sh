@@ -13,5 +13,6 @@ sudo apt update -y
 sudo apt install jenkins -y
 service jenkins start
 cat /var/lib/jenkins/secrets/initialAdminPassword
+sudo usermod -aG docker jenkins
 #chmod 777 jenkins.sh
 #./jenkins.sh
