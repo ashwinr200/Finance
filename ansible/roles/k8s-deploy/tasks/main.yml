@@ -2,21 +2,22 @@
   file:
     path: /home/ansadmin/.kube
     state: directory
-    owner: ansadmin
     mode: '0700'
+  become: yes
+  become_user: ansadmin
   when: inventory_hostname == "localhost"
 
 - name: Copy admin.conf to .kube/config (on master only)
-  become: yes
   copy:
     src: /etc/kubernetes/admin.conf
     dest: /home/ansadmin/.kube/config
-    owner: ansadmin
     mode: '0600'
+  become: yes
+  become_user: ansadmin
   when: inventory_hostname == "localhost"
 
 - name: Deploy app using kubectl (on master only)
+  shell: kubectl apply -f /var/lib/jenkins/workspace/Finance-Project_dev/deployment.yaml
   become: yes
   become_user: ansadmin
-  shell: kubectl apply -f /var/lib/jenkins/workspace/Finance-Project_dev/deployment.yaml
   when: inventory_hostname == "localhost"
