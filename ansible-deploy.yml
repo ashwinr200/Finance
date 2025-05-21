@@ -2,8 +2,6 @@
 - name: Deploy Kubernetes resources
   hosts: localhost
   connection: local
-  become: yes
-  become_method: sudo
+  become: yes  # Stay root, don't switch users
   roles:
     - k8s-deploy
-
