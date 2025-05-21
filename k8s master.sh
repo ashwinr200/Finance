@@ -3,10 +3,6 @@
 set -e
 
 echo "=== Updating & Installing Kubernetes Master ==="
-sudo su
-apt update -y
-apt install -y wget
-
 # Download and execute master setup script
 wget https://raw.githubusercontent.com/akshu20791/Deployment-script/main/k8s-master.sh
 chmod +x k8s-master.sh
