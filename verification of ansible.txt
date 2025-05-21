@@ -1,0 +1,22 @@
+su - ansadmin
+ssh-copy-id ansadmin@<node1_private_ip>
+ssh-copy-id ansadmin@<node2_private_ip>
+
+ansible -i /etc/ansible/hosts all -m ping -u ansadmin
+
+
+Use this command on the master machine (as root or with sudo):
+
+cat <<EOF >> /etc/ansible/hosts
+
+[ansiblegroup]
+<node1_private_ip>
+<node2_private_ip>
+
+EOF
+
+
+After setting up SSH trust using ssh-copy-id, test the connection from the master:
+
+
+ansible -i /etc/ansible/hosts ansiblegroup -m ping -u ansadmin
