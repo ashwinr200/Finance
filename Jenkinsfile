@@ -53,7 +53,7 @@ pipeline {
                                 installation: 'ansible2', 
                                 inventory: '/etc/ansible/hosts', 
                                 playbook: 'ansible-deploy.yml', 
-                                vaultTmpPath: '',
+                                vaultTmpPath: ''
                
             }  }
 
