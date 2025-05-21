@@ -3,9 +3,7 @@
 set -e
 
 echo "=== Updating & Installing Kubernetes Node ==="
-sudo su
-apt update -y
-apt install -y wget
+
 
 # Download and execute node setup script
 wget https://raw.githubusercontent.com/akshu20791/Deployment-script/main/k8s-nodes.sh
