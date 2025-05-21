@@ -1,29 +1,22 @@
-- name: Copy deployment.yaml to all nodes
-  copy:
-    src: deployment.yml
-    dest: /home/ansadmin/deployment.yaml
-    owner: ansadmin
-    mode: '0644'
-
-- name: Ensure kube config directory on master only
+- name: Ensure kube config directory exists (on master only)
   file:
     path: /home/ansadmin/.kube
     state: directory
     owner: ansadmin
     mode: '0700'
-  when: inventory_hostname == "172.31.19.21"
+  when: inventory_hostname == "172.31.91.217"
 
-- name: Copy admin.conf to kube config on master only
+- name: Copy admin.conf to .kube/config (on master only)
   become: yes
   copy:
     src: /etc/kubernetes/admin.conf
     dest: /home/ansadmin/.kube/config
     owner: ansadmin
     mode: '0600'
-  when: inventory_hostname == "172.31.19.21"
+  when: inventory_hostname == "172.31.91.217"
 
-- name: Apply deployment on master only
+- name: Deploy app using kubectl (on master only)
   become: yes
   become_user: ansadmin
-  shell: kubectl apply -f /home/ansadmin/deployment.yaml
-  when: inventory_hostname == "172.31.19.21"
+  shell: kubectl apply -f /var/lib/jenkins/workspace/Finance-Project_dev/deployment.yaml
+  when: inventory_hostname == "172.31.91.217"
