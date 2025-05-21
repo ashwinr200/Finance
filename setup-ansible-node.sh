@@ -1,8 +1,11 @@
 #!/bin/bash
 set -e  # Exit on any error
 # Step 1: Create user 'ansadmin'
-useradd -m -s /bin/bash ansadmin
-echo "ansadmin:ansadmin" | chpasswd
+# Step 2: Create user 'ansadmin' if not exists
+if ! id -u ansadmin >/dev/null 2>&1; then
+    useradd -m -s /bin/bash ansadmin
+    echo "ansadmin:ansadmin" | chpasswd
+fi
 
 # Step 2: Modify SSH config
 sed -i 's/^#*PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
