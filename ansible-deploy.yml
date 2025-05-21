@@ -1,6 +1,7 @@
 ---
 - name: Deploy Kubernetes resources
   hosts: localhost
+  remote_user: ansadmin
   roles:
     - k8s-deploy
   connection: local
