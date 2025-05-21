@@ -1,23 +1,20 @@
-- name: Ensure kube config directory exists (on master only)
+# tasks/main.yml
+
+- name: Ensure kube config directory exists
   file:
     path: /home/ansadmin/.kube
     state: directory
     mode: '0700'
-  become: yes
-  become_user: ansadmin
-  when: inventory_hostname == "localhost"
+    owner: ansadmin
+    group: ansadmin
 
-- name: Copy admin.conf to .kube/config (on master only)
+- name: Copy admin.conf to .kube/config
   copy:
     src: /etc/kubernetes/admin.conf
     dest: /home/ansadmin/.kube/config
+    owner: ansadmin
+    group: ansadmin
     mode: '0600'
-  become: yes
-  become_user: ansadmin
-  when: inventory_hostname == "localhost"
 
-- name: Deploy app using kubectl (on master only)
+- name: Deploy app using kubectl
   shell: kubectl apply -f /var/lib/jenkins/workspace/Finance-Project_dev/deployment.yaml
-  become: yes
-  become_user: ansadmin
-  when: inventory_hostname == "localhost"
