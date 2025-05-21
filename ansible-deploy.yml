@@ -1,6 +1,8 @@
 ---
 - name: Deploy Kubernetes resources
-  hosts: local
+  hosts: localhost
   become: yes
   roles:
     - k8s-deploy
+  connection: local
+
