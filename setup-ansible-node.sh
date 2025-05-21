@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -e  # Exit on any error
 # Step 1: Create user 'ansadmin'
 useradd -m -s /bin/bash ansadmin
 echo "ansadmin:ansadmin" | chpasswd
