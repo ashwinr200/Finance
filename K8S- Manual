@@ -8,3 +8,26 @@ Append this to the command:
 
 --cri-socket unix:///var/run/cri-dockerd.sock
 Then paste the full join command in each node terminal.
+
+
+
+# Ex 1: Ungrouped hosts, specify before any group headers:
+
+## green.example.com
+## blue.example.com
+## 192.168.100.1
+## 192.168.100.10
+
+# Ex 2: A collection of hosts belonging to the 'webservers' group:
+[k8s-master]
+172.31.83.82
+
+[k8s-node]
+172.31.91.217
+
+[all:vars]
+ansible_user=ansadmin
+
+[local]
+localhost ansible_connection=local ansible_user=ansadmin
+
