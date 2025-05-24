@@ -24,54 +24,7 @@ pipeline {
             }
         }
 
-        stage('Run Setup Scripts on Master and Node') {
-            steps {
-                sshagent(credentials: ['ssh-key-ansadmin']) {
-                    sh """
-                        scp -o StrictHostKeyChecking=no terraform/scripts/install_master.sh ansadmin@${env.MASTER_PUBLIC_IP}:/home/ansadmin/
-                        ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
-                            chmod +x /home/ansadmin/install_master.sh
-                            /home/ansadmin/install_master.sh
-                        '
-
-                        scp -o StrictHostKeyChecking=no terraform/scripts/install_node.sh ansadmin@${env.NODE_PUBLIC_IP}:/home/ansadmin/
-                        ssh -o StrictHostKeyChecking=no ansadmin@${env.NODE_PUBLIC_IP} '
-                            chmod +x /home/ansadmin/install_node.sh
-                            /home/ansadmin/install_node.sh
-                        '
-                    """
-                }
-            }
-        }
-
-        stage('Build with Maven') {
-            steps {
-                sh 'mvn clean package'
-            }
-        }
-
-        stage('Build Docker Image') {
-            steps {
-                sh "docker build -t ${FULL_IMAGE} ."
-            }
-        }
-
-        stage('Push to Docker Hub') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds-id', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-                    sh """
-                        echo "$PASSWORD" | docker login -u "$USERNAME" --password-stdin
-                        docker push ${FULL_IMAGE}
-                    """
-                }
-            }
-        }
-
-        stage('Run Container') {
-            steps {
-                sh "docker run -d -p 2021:8080 ${FULL_IMAGE}"
-            }
-        }
+        // ---------------- INFRA ----------------
 
         stage('Terraform Init') {
             steps {
@@ -86,9 +39,7 @@ pipeline {
         stage('Terraform Plan') {
             steps {
                 script {
-                    def tfVarsFile = env.BRANCH_NAME == 'prod' ? 'prod.tfvars' : (env.BRANCH_NAME == 'stage' ? 'stage.tfvars' : null)
-                    if (tfVarsFile == null) error "Branch ${env.BRANCH_NAME} not supported"
-
+                    def tfVarsFile = (env.BRANCH_NAME == 'prod') ? 'prod.tfvars' : 'stage.tfvars'
                     dir(env.TERRAFORM_DIR) {
                         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
                             sh "terraform plan -var-file=${tfVarsFile}"
@@ -101,29 +52,27 @@ pipeline {
         stage('Terraform Apply') {
             steps {
                 script {
-                    def tfVarsFile = env.BRANCH_NAME == 'prod' ? 'prod.tfvars' : 'stage.tfvars'
-
+                    def tfVarsFile = (env.BRANCH_NAME == 'prod') ? 'prod.tfvars' : 'stage.tfvars'
                     dir(env.TERRAFORM_DIR) {
                         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
                             sh "terraform apply -auto-approve -var-file=${tfVarsFile}"
-
-                            env.MASTER_PRIVATE_IP = sh(script: "terraform output -raw master_private_ip", returnStdout: true).trim()
                             env.MASTER_PUBLIC_IP = sh(script: "terraform output -raw master_public_ip", returnStdout: true).trim()
                             env.NODE_PRIVATE_IP = sh(script: "terraform output -raw node_private_ip", returnStdout: true).trim()
-                            env.NODE_PUBLIC_IP = sh(script: "terraform output -raw node_public_ip", returnStdout: true).trim()
                         }
                     }
                 }
             }
         }
 
+        // ---------------- ANSIBLE SETUP ----------------
+
         stage('Provision Ansible Master') {
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadmin', keyFileVariable: 'SSH_KEY')]) {
                     script {
-                        def PUBLIC_KEY = sh(script: "ssh-keygen -y -f ${SSH_KEY}", returnStdout: true).trim()
+                        def PUBLIC_KEY = sh(script: "ssh-keygen -y -f ${env.SSH_KEY}", returnStdout: true).trim()
                         sh """
-                            ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${env.MASTER_PUBLIC_IP} '
+                            ssh -o StrictHostKeyChecking=no -i ${env.SSH_KEY} ubuntu@${env.MASTER_PUBLIC_IP} '
                                 sudo useradd -m -s /bin/bash ansadmin || true
                                 echo "ansadmin ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/ansadmin
                                 sudo mkdir -p /home/ansadmin/.ssh
@@ -143,12 +92,10 @@ pipeline {
                 sshagent(credentials: ['ssh-key-ansadmin']) {
                     sh """
                         ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
-                            sudo apt-get update -qq &&
-                            sudo apt-get install -y --fix-broken &&
-                            sudo apt-get install -y software-properties-common &&
-                            sudo apt-add-repository --yes --update ppa:ansible/ansible &&
-                            sudo apt-get install -y ansible-core ansible sshpass &&
-                            ansible --version
+                            sudo apt-get update -qq
+                            sudo apt-get install -y software-properties-common
+                            sudo apt-add-repository --yes --update ppa:ansible/ansible
+                            sudo apt-get install -y ansible-core ansible sshpass
                         '
                     """
                 }
@@ -160,30 +107,51 @@ pipeline {
                 sshagent(credentials: ['ssh-key-ansadmin']) {
                     sh """
                         ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
-                            sudo mkdir -p /etc/ansible &&
-                            sudo chown ansadmin:ansadmin /etc/ansible
+                            sudo mkdir -p /etc/ansible
+                            echo "[all]" | sudo tee /etc/ansible/hosts
+                            echo "${env.NODE_PRIVATE_IP}" | sudo tee -a /etc/ansible/hosts
+                            echo "[defaults]" | sudo tee /etc/ansible/ansible.cfg
+                            echo "host_key_checking = False" | sudo tee -a /etc/ansible/ansible.cfg
                         '
-                        ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} "
-                            echo -e '[all]\\n${env.NODE_PRIVATE_IP}' | sudo tee /etc/ansible/hosts
-                            echo -e '[defaults]\\nhost_key_checking = False' | sudo tee /etc/ansible/ansible.cfg
-                        "
                     """
                 }
             }
         }
 
-        stage('Configure SSH Access') {
+        stage('Configure SSH Access to Node') {
             steps {
                 sshagent(credentials: ['ssh-key-ansadmin']) {
                     sh """
                         ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
-                            [ ! -f ~/.ssh/id_rsa ] && ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
-                        '
-                        ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} "
+                            ssh-keygen -t rsa -f ~/.ssh/id_rsa -N "" || true
                             ssh-keyscan ${env.NODE_PRIVATE_IP} >> ~/.ssh/known_hosts
-                            sshpass -p 'ansadmin' ssh-copy-id -f -i ~/.ssh/id_rsa.pub ansadmin@${env.NODE_PRIVATE_IP}
-                            ssh ansadmin@${env.NODE_PRIVATE_IP} 'echo SSH connection successful!'
-                        "
+                            sshpass -p "ansadmin" ssh-copy-id -f -i ~/.ssh/id_rsa.pub ansadmin@${env.NODE_PRIVATE_IP}
+                        '
+                    """
+                }
+            }
+        }
+
+        // ---------------- BUILD & DEPLOY ----------------
+
+        stage('Build with Maven') {
+            steps {
+                sh 'mvn clean package'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh "docker build -t ${FULL_IMAGE} ."
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds-id', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                    sh """
+                        echo "$PASSWORD" | docker login -u "$USERNAME" --password-stdin
+                        docker push ${FULL_IMAGE}
                     """
                 }
             }
@@ -219,13 +187,11 @@ pipeline {
                  subject: "SUCCESS: Pipeline ${currentBuild.fullDisplayName}",
                  body: """
                  Deployment completed successfully!
-                 
+
                  Master Node:
-                 - Public IP: ${env.MASTER_PUBLIC_IP}:30000
-                 - Private IP: ${env.MASTER_PRIVATE_IP}
-                 
+                 - Public IP: ${env.MASTER_PUBLIC_IP}
+
                  Worker Node:
-                 - Public IP: ${env.NODE_PUBLIC_IP}:30000
                  - Private IP: ${env.NODE_PRIVATE_IP}
                  """
         }
