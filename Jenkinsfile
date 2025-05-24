@@ -198,6 +198,7 @@ EOF
                         sh(script: """ssh -o StrictHostKeyChecking=no -i "${SSH_KEY}" ubuntu@${env.MASTER_PUBLIC_IP} bash -c '
                             sudo useradd -m -s /bin/bash ansadmin || true
                             echo "ansadmin ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/ansadmin
+                            echo "jenkins ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/jenkins && sudo chmod 440 /etc/sudoers.d/jenkins
                             sudo mkdir -p /home/ansadmin/.ssh
                             echo "${publicKey}" | sudo tee /home/ansadmin/.ssh/authorized_keys
                             sudo chown -R ansadmin:ansadmin /home/ansadmin/.ssh
@@ -222,7 +223,7 @@ EOF
                         # Now configure the files
                         ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} "
                             echo -e '[all]\\n${env.NODE_PRIVATE_IP}' | sudo tee /etc/ansible/hosts
-                            echo -e '[defaults]\\nhost_key_checking = False' | sudo tee /etc/ansible/ansible.cfg
+                             echo -e '[defaults]\\nhost_key_checking = False\\nroles_path = ./ansible/roles' | sudo tee /etc/ansible/ansible.cfg
                             sudo chmod 644 /etc/ansible/*
                         "
                         
@@ -330,6 +331,7 @@ stage('Provision ansadmin on Node') {
                 sh(script: """ssh -o StrictHostKeyChecking=no -i "${SSH_KEY}" ubuntu@${env.NODE_PUBLIC_IP} bash -c '
                     sudo useradd -m -s /bin/bash ansadmin || true
                     echo "ansadmin ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/ansadmin
+                     echo "jenkins ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/jenkins && sudo chmod 440 /etc/sudoers.d/jenkins
                     sudo mkdir -p /home/ansadmin/.ssh
                     echo "${publicKey}" | sudo tee /home/ansadmin/.ssh/authorized_keys
                     sudo chown -R ansadmin:ansadmin /home/ansadmin/.ssh
