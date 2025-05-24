@@ -375,12 +375,11 @@ stage('Provision ansadmin on Node') {
 
 
        
-        stage('Write Ansible Inventory') {
-            steps {
-                sshagent(['ssh-key-ansadmin1']) {
-                    script {
-                        def inventoryContent = """
-[k8s-master]
+      stage('Write Ansible Inventory') {
+    steps {
+        sshagent(['ssh-key-ansadmin1']) {
+            script {
+                def inventoryContent = """[k8s-master]
 ${env.MASTER_PRIVATE_IP}
 
 [k8s-node]
@@ -392,12 +391,22 @@ ansible_user=ansadmin
 [local]
 localhost ansible_connection=local ansible_user=ansadmin
 """
-                       ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} "echo \\"${inventoryContent.replaceAll('"', '\\\\"')}\\\" | sudo tee /etc/ansible/hosts > /dev/null"
-                    }
-                }
+
+                // Properly escape the content for SSH command
+                def escapedContent = inventoryContent
+                    .replace('\\', '\\\\')
+                    .replace('"', '\\"')
+                    .replace('$', '\\$')
+                    .replace('`', '\\`')
+
+                sh """
+                    ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} \
+                        'echo "${escapedContent}" | sudo tee /etc/ansible/hosts > /dev/null'
+                """
             }
         }
     }
+}
 
     post {
         always {
