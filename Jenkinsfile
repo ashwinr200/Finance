@@ -141,6 +141,7 @@ sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/k8s%20mast
 sudo dos2unix /tmp/k8s-master.sh
 sudo chmod +x /tmp/k8s-master.sh
 sudo /tmp/k8s-master.sh
+EOF
                     """
                 }
             }
