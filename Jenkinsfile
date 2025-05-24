@@ -63,7 +63,18 @@ pipeline {
                 }
             }
         }
-
+stage('Test SSH Key') {
+            steps {
+                withCredentials([sshUserPrivateKey(
+                    credentialsId: 'ssh-key-ansadmin1',
+                    keyFileVariable: 'SSH_KEY'
+                )]) {
+                    // WARNING: Prints private key! Use only for debugging.
+                    sh 'cat $SSH_KEY > /tmp/debug_key && chmod 600 /tmp/debug_key'
+                    sh 'ssh -vvv -i /tmp/debug_key ansadmin@18.209.105.116'
+                }
+            }
+        }
         // ---------------- ANSIBLE SETUP ----------------
 
         stage('Provision Ansible Master') {
