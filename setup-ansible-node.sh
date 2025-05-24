@@ -1,8 +1,9 @@
 #!/bin/bash
 set -e  # Exit on any error
-# Step 1: Create user 'ansadmin'
-# Step 2: Create user 'ansadmin' if not exists
-if ! id -u ansadmin >/dev/null 2>&1; then
+
+# Step 1: Create user 'ansadmin' if not exists
+if ! id -u ansadmin >/dev/null 2>&1
+then
     useradd -m -s /bin/bash ansadmin
     echo "ansadmin:ansadmin" | chpasswd
 fi
@@ -11,8 +12,6 @@ fi
 sed -i 's/^#*PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
 sed -i 's/^#*PubkeyAuthentication.*/PubkeyAuthentication yes/' /etc/ssh/sshd_config
 sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
-
-# 60-cloudimg-settings.conf file modification
 echo "PasswordAuthentication yes" > /etc/ssh/sshd_config.d/60-cloudimg-settings.conf
 
 # Restart SSH service
@@ -20,7 +19,6 @@ service ssh restart
 
 # Step 3: Grant sudo access to ansadmin
 echo "ansadmin ALL=(ALL:ALL) NOPASSWD:ALL" | sudo EDITOR='tee -a' visudo
-
 
 echo "==== Node setup complete ===="
 echo "Ready to accept SSH key from Ansible master (ansadmin)"
