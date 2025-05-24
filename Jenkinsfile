@@ -185,7 +185,7 @@ stage('Provision Ansible Master') {
                     sudo mkdir -p /etc/ansible &&
                     sudo chown ansadmin:ansadmin /etc/ansible
                 '
-                
+             
                 # Now configure the files
                 ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} "
                     echo -e '[all]\\n${env.NODE_PRIVATE_IP}' | sudo tee /etc/ansible/hosts
