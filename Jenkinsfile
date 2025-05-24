@@ -161,7 +161,7 @@ stage('Provision Ansible Master') {
                         
                          sh """
                     ssh -o StrictHostKeyChecking=no -i ${env.SSH_KEY} ubuntu@${env.MASTER_PUBLIC_IP} '
-                        ssh -o StrictHostKeyChecking=no -i /home/ansadmin/.ssh/id_rsa ubuntu@${env.NODE_PRIVATE_IP} "
+                       
                             sudo useradd -m -s /bin/bash ansadmin || true
                             echo \\"ansadmin ALL=(ALL) NOPASSWD:ALL\\" | sudo tee /etc/sudoers.d/ansadmin
                             sudo mkdir -p /home/ansadmin/.ssh
