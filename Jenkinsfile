@@ -98,49 +98,49 @@ pipeline {
                     credentialsId: 'ssh-key-ansadmin1',
                     keyFileVariable: 'SSH_KEY'
                 )]) {
-                    sh """
-ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${env.MASTER_PUBLIC_IP} << EOF
+                    sh '''
+ssh -o StrictHostKeyChecking=no -i ''' + SSH_KEY + ''' ubuntu@''' + env.MASTER_PUBLIC_IP + ''' << 'EOF'
 set -xe
 
-                        max_wait=300
-                        waited=0
-                        while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || sudo fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do
-                          echo "Waiting for other apt processes to finish..."
-                          sleep 5
-                          waited=$((waited+5))
-                          if [ $waited -ge $max_wait ]; then
-                            echo "Timeout waiting for apt lock, exiting."
-                            exit 1
-                          fi
-                        done
+max_wait=300
+waited=0
+while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || sudo fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do
+  echo "Waiting for other apt processes to finish..."
+  sleep 5
+  waited=$((waited+5))
+  if [ $waited -ge $max_wait ]; then
+    echo "Timeout waiting for apt lock, exiting."
+    exit 1
+  fi
+done
 
-                        sudo apt-get update && sudo apt-get install -y dos2unix wget curl
+sudo apt-get update && sudo apt-get install -y dos2unix wget curl
 
-                        # Download and run ansible master setup script
-                        sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/setup-ansible-master.sh -O /tmp/setup-ansible-master.sh
-                        sudo dos2unix /tmp/setup-ansible-master.sh
-                        sudo chmod +x /tmp/setup-ansible-master.sh
-                        sudo /tmp/setup-ansible-master.sh
+# Download and run ansible master setup script
+sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/setup-ansible-master.sh -O /tmp/setup-ansible-master.sh
+sudo dos2unix /tmp/setup-ansible-master.sh
+sudo chmod +x /tmp/setup-ansible-master.sh
+sudo /tmp/setup-ansible-master.sh
 
-                        # Download and run Prometheus install script
-                        sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/prometheus.sh -O /tmp/prometheus.sh
-                        sudo dos2unix /tmp/prometheus.sh
-                        sudo chmod +x /tmp/prometheus.sh
-                        sudo /tmp/prometheus.sh
+# Download and run Prometheus install script
+sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/prometheus.sh -O /tmp/prometheus.sh
+sudo dos2unix /tmp/prometheus.sh
+sudo chmod +x /tmp/prometheus.sh
+sudo /tmp/prometheus.sh
 
-                        # Download and run Docker install script
-                        sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/docker.sh -O /tmp/docker.sh
-                        sudo dos2unix /tmp/docker.sh
-                        sudo chmod +x /tmp/docker.sh
-                        sudo /tmp/docker.sh
+# Download and run Docker install script
+sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/docker.sh -O /tmp/docker.sh
+sudo dos2unix /tmp/docker.sh
+sudo chmod +x /tmp/docker.sh
+sudo /tmp/docker.sh
 
-                        # Download and run Kubernetes master install script
-                        sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/k8s%20master.sh -O /tmp/k8s-master.sh
-                        sudo dos2unix /tmp/k8s-master.sh
-                        sudo chmod +x /tmp/k8s-master.sh
-                        sudo /tmp/k8s-master.sh
-                        EOF
-                    """
+# Download and run Kubernetes master install script
+sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/k8s%20master.sh -O /tmp/k8s-master.sh
+sudo dos2unix /tmp/k8s-master.sh
+sudo chmod +x /tmp/k8s-master.sh
+sudo /tmp/k8s-master.sh
+EOF
+'''
                 }
             }
         }
