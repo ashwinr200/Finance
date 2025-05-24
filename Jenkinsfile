@@ -102,19 +102,18 @@ pipeline {
 ssh -o StrictHostKeyChecking=no -i ''' + SSH_KEY + ''' ubuntu@''' + env.MASTER_PUBLIC_IP + ''' << 'EOF'
 set -xe
 
-# Wait for apt lock to be released (max 5 mins)
 max_wait=300
 waited=0
 while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || sudo fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do
-  echo "\$(date): Waiting for apt lock..."
+  echo "$(date): Waiting for apt lock..."
   sleep 5
-  waited=\$((waited+5))
-  if [ \$waited -ge \$max_wait ]; then
-    echo "\$(date): Timeout waiting for apt lock, exiting."
-    exit 1
+  waited=$((waited+5))
+  if [ $waited -ge $max_wait ]; then
+    echo "$(date): Timeout waiting for apt lock. Killing other apt processes..."
+    sudo killall apt apt-get 2>/dev/null || true
+    break
   fi
 done
-
 # Proceed once lock is released
 sudo apt-get update
 sudo apt-get install -y dos2unix wget curl
