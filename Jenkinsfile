@@ -459,6 +459,33 @@ stage('Run Ansible on Master') {
     }
 }
 
+stage('Start Prometheus on Master') {
+    steps {
+        sshagent(['ssh-key-ansadmin1']) {
+            sh """
+                ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
+                    cd /opt/prometheus
+                    nohup ./prometheus --config.file=/opt/prometheus/prometheus.yml > prometheus.log 2>&1 &
+                '
+            """
+        }
+    }
+}
+
+stage('Start Prometheus on Node') {
+    steps {
+        sshagent(['ssh-key-ansadmin1']) {
+            sh """
+                ssh -o StrictHostKeyChecking=no ansadmin@${env.NODE_PUBLIC_IP} '
+                    cd /opt/prometheus
+                    nohup ./prometheus --config.file=/opt/prometheus/prometheus.yml > prometheus.log 2>&1 &
+                '
+            """
+        }
+    }
+}
+
+
 }
 post {
     always {
