@@ -102,10 +102,10 @@ pipeline {
                     sh """
                         ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${env.MASTER_PUBLIC_IP} << 'EOF'
                         set -x
-                        apt-get update && apt-get install -y dos2unix
+                        sudo apt-get update && apt-get install -y dos2unix
                         wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/setup-ansible-master.sh -O /tmp/setup-ansible-master.sh
                         chmod +x /tmp/setup-ansible-master.sh
-                        dos2unix /tmp/setup-ansible-master.sh
+                        sudo dos2unix /tmp/setup-ansible-master.sh
                         /tmp/setup-ansible-master.sh
 
                         wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/prometheus.sh -O /tmp/prometheus.sh
@@ -136,10 +136,10 @@ EOF
                         set -x
 
                         # Download and run Ansible node setup
-                        apt-get update && apt-get install -y dos2unix
+                        sudo apt-get update && apt-get install -y dos2unix
                         wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/setup-ansible-node.sh -O /tmp/setup-ansible-node.sh
                         chmod +x /tmp/setup-ansible-node.sh
-                        dos2unix /tmp/setup-ansible-node.sh
+                        sudo dos2unix /tmp/setup-ansible-node.sh
                         /tmp/setup-ansible-node.sh
 
                         # Download and run Prometheus setup
