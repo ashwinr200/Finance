@@ -245,12 +245,12 @@ stage('Install Ansible') {
             cleanWs()
         }
         failure {
-            mail to: 'devops-team@example.com',
+            mail to: 'azureashwin25@gmail.com',
                  subject: "FAILED: Pipeline ${currentBuild.fullDisplayName}",
                  body: "Check build ${env.BUILD_URL} for details"
         }
         success {
-            mail to: 'devops-team@example.com',
+            mail to: 'azureashwin25@gmail.com',
                  subject: "SUCCESS: Pipeline ${currentBuild.fullDisplayName}",
                  body: """
                  Deployment completed successfully!
