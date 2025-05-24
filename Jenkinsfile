@@ -370,8 +370,7 @@ pipeline {
                 }
             }
         }
-    }
- stage('Write Ansible Inventory') {
+        stage('Write Ansible Inventory') {
             steps {
                 sshagent(['ssh-key-ansadmin1']) {
                     script {
@@ -403,6 +402,8 @@ localhost ansible_connection=local ansible_user=ansadmin
                 }
             }
         }
+    }
+ 
     post {
         always {
             cleanWs()
