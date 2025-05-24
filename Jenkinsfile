@@ -237,38 +237,7 @@ EOF
             }
         }
 
-        stage('Join Node to Kubernetes Master') {
-            steps {
-                withCredentials([sshUserPrivateKey(
-                    credentialsId: 'ssh-key-ansadmin1',
-                    keyFileVariable: 'SSH_KEY'
-                )]) {
-                    script {
-                        // Fetch join command from master
-                        def joinCommand = sh(
-                            script: """
-                            ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ansadmin@${env.MASTER_PUBLIC_IP} '
-                                sudo kubeadm token create --print-join-command
-                            '
-                            """,
-                            returnStdout: true
-                        ).trim()
-
-                        // Append CRI socket path
-                        def fullJoinCommand = "${joinCommand} --cri-socket unix:///var/run/cri-dockerd.sock"
-                        echo "Executing on node: ${fullJoinCommand}"
-
-                        // Run join command on the node
-                        sh """
-                        ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ansadmin@${env.NODE_PRIVATE_IP} '
-                            sudo ${fullJoinCommand}
-                        '
-                        """
-                    }
-                }
-            }
-        }
-
+        
 
 stage('Install Prerequisites on Node') {
     steps {
@@ -352,6 +321,39 @@ EOF
         }
     }
 }
+
+        stage('Join Node to Kubernetes Master') {
+            steps {
+                withCredentials([sshUserPrivateKey(
+                    credentialsId: 'ssh-key-ansadmin1',
+                    keyFileVariable: 'SSH_KEY'
+                )]) {
+                    script {
+                        // Fetch join command from master
+                        def joinCommand = sh(
+                            script: """
+                            ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ansadmin@${env.MASTER_PUBLIC_IP} '
+                                sudo kubeadm token create --print-join-command
+                            '
+                            """,
+                            returnStdout: true
+                        ).trim()
+
+                        // Append CRI socket path
+                        def fullJoinCommand = "${joinCommand} --cri-socket unix:///var/run/cri-dockerd.sock"
+                        echo "Executing on node: ${fullJoinCommand}"
+
+                        // Run join command on the node
+                        sh """
+                        ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ansadmin@${env.NODE_PRIVATE_IP} '
+                            sudo ${fullJoinCommand}
+                        '
+                        """
+                    }
+                }
+            }
+        }
+
 
        
         stage('Write Ansible Inventory') {
