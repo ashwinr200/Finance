@@ -1,6 +1,7 @@
 
 # Install Docker
 echo "Installing Docker..."
+sudo apt install maven -y 
 sudo apt-get install -y docker.io
 # Add Docker's official GPG key:
 sudo apt-get install ca-certificates curl
