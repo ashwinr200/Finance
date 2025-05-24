@@ -153,24 +153,55 @@ EOF
                 }
             }
         }
-
-     
-        stage('Configure Ansible Environment') {
+stage('Provision Ansible Master') {
             steps {
-                sshagent(['ssh-key-ansadmin1']) {
-                    sh """
-                        ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
-                            sudo mkdir -p /etc/ansible
-                            echo "[all]" | sudo tee /etc/ansible/hosts
-                            echo "${env.NODE_PRIVATE_IP}" | sudo tee -a /etc/ansible/hosts
-                            echo "[defaults]" | sudo tee /etc/ansible/ansible.cfg
-                            echo "host_key_checking = False" | sudo tee -a /etc/ansible/ansible.cfg
-                            echo "remote_user = ansadmin" | sudo tee -a /etc/ansible/ansible.cfg
-                        '
-                    """
+                withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadmin1', keyFileVariable: 'SSH_KEY')]) {
+                    script {
+                        def PUBLIC_KEY = sh(script: "ssh-keygen -y -f ${env.SSH_KEY}", returnStdout: true).trim()
+                        
+                        sh """
+                            # Configure ansadmin user on master
+                            ssh -o StrictHostKeyChecking=no -i ${env.SSH_KEY} ubuntu@${env.MASTER_PUBLIC_IP} '
+                                sudo useradd -m -s /bin/bash ansadmin || true
+                                echo "ansadmin ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/ansadmin
+                                sudo mkdir -p /home/ansadmin/.ssh
+                                echo "${PUBLIC_KEY}" | sudo tee /home/ansadmin/.ssh/authorized_keys
+                                sudo chown -R ansadmin:ansadmin /home/ansadmin/.ssh
+                                sudo chmod 700 /home/ansadmin/.ssh
+                                sudo chmod 600 /home/ansadmin/.ssh/authorized_keys
+                            '
+                        """
+                    }
                 }
             }
         }
+        stage('Configure Ansible Environment') {
+    steps {
+        sshagent(credentials: ['ssh-key-ansadmin1']) {
+            sh """
+                # First create the Ansible directory structure
+                ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
+                    sudo mkdir -p /etc/ansible &&
+                    sudo chown ansadmin:ansadmin /etc/ansible
+                '
+                
+                # Now configure the files
+                ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} "
+                    echo -e '[all]\\n${env.NODE_PRIVATE_IP}' | sudo tee /etc/ansible/hosts
+                    echo -e '[defaults]\\nhost_key_checking = False' | sudo tee /etc/ansible/ansible.cfg
+                    sudo chmod 644 /etc/ansible/*
+                "
+                
+                # Verify the configuration
+                ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
+                    ls -la /etc/ansible/
+                    cat /etc/ansible/hosts
+                    cat /etc/ansible/ansible.cfg
+                '
+            """
+        }
+    }
+}
 
         stage('Configure SSH Access to Node') {
             steps {
