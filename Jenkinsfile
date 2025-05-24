@@ -5,7 +5,7 @@ pipeline {
         AWS_DEFAULT_REGION = 'us-east-1'
         TERRAFORM_DIR = 'terraform'
         ANSIBLE_DIR = 'ansible'
-        IMAGE_NAME = 'finance-dev'
+        IMAGE_NAME = 'finance-stage'
       DOCKER_REGISTRY = 'ashwinr2001/financedev18may2025capstone:v1'
     }
 
