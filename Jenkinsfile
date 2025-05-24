@@ -321,6 +321,25 @@ EOF
         }
     }
 }
+stage('Provision ansadmin on Node') {
+    steps {
+        withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadmin1', keyFileVariable: 'SSH_KEY')]) {
+            script {
+                def publicKey = sh(script: "ssh-keygen -y -f ${SSH_KEY}", returnStdout: true).trim()
+                
+                sh(script: """ssh -o StrictHostKeyChecking=no -i "${SSH_KEY}" ubuntu@${env.NODE_PUBLIC_IP} bash -c '
+                    sudo useradd -m -s /bin/bash ansadmin || true
+                    echo "ansadmin ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/ansadmin
+                    sudo mkdir -p /home/ansadmin/.ssh
+                    echo "${publicKey}" | sudo tee /home/ansadmin/.ssh/authorized_keys
+                    sudo chown -R ansadmin:ansadmin /home/ansadmin/.ssh
+                    sudo chmod 700 /home/ansadmin/.ssh
+                    sudo chmod 600 /home/ansadmin/.ssh/authorized_keys
+                '""")
+            }
+        }
+    }
+}
 
         stage('Join Node to Kubernetes Master') {
             steps {
@@ -373,10 +392,7 @@ ansible_user=ansadmin
 [local]
 localhost ansible_connection=local ansible_user=ansadmin
 """
-                        sh """
-                        ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PRIVATE_IP} 'echo """ + 
-                        inventoryContent.replaceAll('"', '\\"') + """ > ~/inventory.ini'
-                        """
+                       ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} "echo \\"${inventoryContent.replaceAll('"', '\\\\"')}\\\" | sudo tee /etc/ansible/hosts > /dev/null"
                     }
                 }
             }
