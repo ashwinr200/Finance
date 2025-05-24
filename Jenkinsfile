@@ -66,32 +66,37 @@ pipeline {
 
         // ---------------- ANSIBLE SETUP ----------------
 
-       stage('Provision Ansible Master') {
-    steps {
-        withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadmin1', keyFileVariable: 'SSH_KEY')]) {
-    script {
-        def PUBLIC_KEY = sh(script: "ssh-keygen -y -f ${SSH_KEY}", returnStdout: true).trim()
-        sh(script: '''
-            ssh -o StrictHostKeyChecking=no -i "$SSH_KEY" ubuntu@"$MASTER_PUBLIC_IP" << EOF
+        stage('Provision Ansible Master') {
+            steps {
+                withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadmin1', keyFileVariable: 'SSH_KEY')]) {
+                    script {
+                        // Extract public key from the private key file
+                        def PUBLIC_KEY = sh(script: "ssh-keygen -y -f ${SSH_KEY}", returnStdout: true).trim()
+
+                        // Run ssh commands to create ansadmin user and setup SSH keys on master node
+                        sh """
+                            export SSH_KEY='${SSH_KEY}'
+                            export MASTER_IP='${env.MASTER_PUBLIC_IP}'
+                            export PUBLIC_KEY='${PUBLIC_KEY}'
+
+                            ssh -o StrictHostKeyChecking=no -i "\$SSH_KEY" ubuntu@"\$MASTER_IP" << EOF
 sudo useradd -m -s /bin/bash ansadmin || true
 echo 'ansadmin ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/ansadmin
 sudo mkdir -p /home/ansadmin/.ssh
-echo "${PUBLIC_KEY}" | sudo tee /home/ansadmin/.ssh/authorized_keys
+echo "\$PUBLIC_KEY" | sudo tee /home/ansadmin/.ssh/authorized_keys
 sudo chown -R ansadmin:ansadmin /home/ansadmin/.ssh
 sudo chmod 700 /home/ansadmin/.ssh
 sudo chmod 600 /home/ansadmin/.ssh/authorized_keys
 EOF
-        ''', environment: [SSH_KEY: env.SSH_KEY, MASTER_PUBLIC_IP: env.MASTER_PUBLIC_IP, PUBLIC_KEY: PUBLIC_KEY])
-    }
-}
-
-    }
-}
-
+                        """
+                    }
+                }
+            }
+        }
 
         stage('Install Ansible') {
             steps {
-                sshagent(credentials: ['ssh-key-ansadmin']) {
+                sshagent(credentials: ['ssh-key-ansadmin1']) {
                     sh """
                         ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
                             sudo apt-get update -qq
@@ -106,7 +111,7 @@ EOF
 
         stage('Configure Ansible Environment') {
             steps {
-                sshagent(credentials: ['ssh-key-ansadmin']) {
+                sshagent(credentials: ['ssh-key-ansadmin1']) {
                     sh """
                         ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
                             sudo mkdir -p /etc/ansible
@@ -122,7 +127,7 @@ EOF
 
         stage('Configure SSH Access to Node') {
             steps {
-                sshagent(credentials: ['ssh-key-ansadmin']) {
+                sshagent(credentials: ['ssh-key-ansadmin1']) {
                     sh """
                         ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
                             ssh-keygen -t rsa -f ~/.ssh/id_rsa -N "" || true
@@ -161,7 +166,7 @@ EOF
 
         stage('Deploy Ansible Playbook') {
             steps {
-                sshagent(credentials: ['ssh-key-ansadmin']) {
+                sshagent(credentials: ['ssh-key-ansadmin1']) {
                     sh """
                         scp -o StrictHostKeyChecking=no -r ${env.ANSIBLE_DIR}/ ansadmin@${env.MASTER_PUBLIC_IP}:/home/ansadmin/
                         ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
