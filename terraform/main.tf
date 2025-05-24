@@ -137,6 +137,6 @@ fi
 
 
 # Restart sshd
-systemctl restart sshd
+systemctl restart ssh
 EOF
 }
