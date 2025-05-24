@@ -451,7 +451,8 @@ stage('Run Ansible on Master') {
         sshagent(['ssh-key-ansadmin1']) {
             sh """
                 ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
-                    ansible-playbook -i hosts /tmp/Finance/ansible-deploy.yml --extra-vars "build_tag=${BRANCH_TAG} image_name=${FULL_IMAGE}"
+                    cd /tmp/Finance
+                    ansible-playbook -i /etc/ansible/hosts ansible-deploy.yml --extra-vars "build_tag=${BRANCH_TAG} image_name=${FULL_IMAGE}"
                 '
             """
         }
