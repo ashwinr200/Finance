@@ -102,20 +102,22 @@ pipeline {
 ssh -o StrictHostKeyChecking=no -i ''' + SSH_KEY + ''' ubuntu@''' + env.MASTER_PUBLIC_IP + ''' << 'EOF'
 set -xe
 
+# Wait for apt lock to be released (max 5 mins)
 max_wait=300
 waited=0
 while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || sudo fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do
-  echo "Waiting for other apt processes to finish..."
+  echo "\$(date): Waiting for apt lock..."
   sleep 5
   waited=\$((waited+5))
   if [ \$waited -ge \$max_wait ]; then
-    echo "Timeout waiting for apt lock, exiting."
+    echo "\$(date): Timeout waiting for apt lock, exiting."
     exit 1
   fi
 done
 
-# Update and install required tools
-sudo apt-get update && sudo apt-get install -y dos2unix wget curl
+# Proceed once lock is released
+sudo apt-get update
+sudo apt-get install -y dos2unix wget curl
 
 # Download and run ansible master setup script
 sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/setup-ansible-master.sh -O /tmp/setup-ansible-master.sh
