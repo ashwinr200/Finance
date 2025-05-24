@@ -101,25 +101,32 @@ pipeline {
                 )]) {
                     sh """
                         ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${env.MASTER_PUBLIC_IP} << 'EOF'
-                        set -x
-                        sudo apt-get update && apt-get install -y dos2unix
-                        wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/setup-ansible-master.sh -O /tmp/setup-ansible-master.sh
-                        chmod +x /tmp/setup-ansible-master.sh
-                        sudo dos2unix /tmp/setup-ansible-master.sh
-                        /tmp/setup-ansible-master.sh
+                       set -xe
+sudo apt-get update && sudo apt-get install -y dos2unix wget curl
 
-                        wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/prometheus.sh -O /tmp/prometheus.sh
-                        chmod +x /tmp/prometheus.sh
-                        /tmp/prometheus.sh
+# Download and run ansible master setup script
+sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/setup-ansible-master.sh -O /tmp/setup-ansible-master.sh
+sudo dos2unix /tmp/setup-ansible-master.sh
+sudo chmod +x /tmp/setup-ansible-master.sh
+sudo /tmp/setup-ansible-master.sh
 
-                        wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/docker.sh -O /tmp/docker.sh
-                        chmod +x /tmp/docker.sh
-                        /tmp/docker.sh
+# Download and run Prometheus install script
+sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/prometheus.sh -O /tmp/prometheus.sh
+sudo dos2unix /tmp/prometheus.sh
+sudo chmod +x /tmp/prometheus.sh
+sudo /tmp/prometheus.sh
 
-                        wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/k8s%20master.sh -O /tmp/k8s-master.sh
-                        chmod +x /tmp/k8s-master.sh
-                        /tmp/k8s-master.sh
-EOF
+# Download and run Docker install script
+sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/docker.sh -O /tmp/docker.sh
+sudo dos2unix /tmp/docker.sh
+sudo chmod +x /tmp/docker.sh
+sudo /tmp/docker.sh
+
+# Download and run Kubernetes master install script
+sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/k8s%20master.sh -O /tmp/k8s-master.sh
+sudo dos2unix /tmp/k8s-master.sh
+sudo chmod +x /tmp/k8s-master.sh
+sudo /tmp/k8s-master.sh
                     """
                 }
             }
