@@ -407,6 +407,43 @@ localhost ansible_connection=local ansible_user=ansadmin
         }
     }
     }
+        stage('Build with Maven') {
+            steps {
+                sh 'mvn clean package'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh "docker build -t ${FULL_IMAGE} ."
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds-id', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                    sh """
+                        echo "$PASSWORD" | docker login -u "$USERNAME" --password-stdin
+                        docker push ${FULL_IMAGE}
+                    """
+                }
+            }
+        }
+
+
+        stage('Deploy to Kubernetes via Ansible') {
+            steps {
+                ansiblePlaybook credentialsId: 'ssh-key-ansadm', 
+                                installation: 'ansible2', 
+                                inventory: '/etc/ansible/hosts', 
+                                playbook: 'ansible-deploy.yml', 
+                                vaultTmpPath: '',
+                     extraVars: [
+                            build_tag: "${BRANCH_TAG}",
+                            image_name: "${FULL_IMAGE}"
+                        ]
+               
+            }  }
     }
     
 
