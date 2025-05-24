@@ -69,12 +69,10 @@ pipeline {
        stage('Provision Ansible Master') {
     steps {
         withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadmin1', keyFileVariable: 'SSH_KEY')]) {
-            script {
-                def PUBLIC_KEY = sh(script: "ssh-keygen -y -f ${SSH_KEY}", returnStdout: true).trim()
-
-                // Use double quotes on the heredoc and escape variables properly
-                sh """
-                ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${MASTER_PUBLIC_IP} << EOF
+    script {
+        def PUBLIC_KEY = sh(script: "ssh-keygen -y -f ${SSH_KEY}", returnStdout: true).trim()
+        sh(script: '''
+            ssh -o StrictHostKeyChecking=no -i "$SSH_KEY" ubuntu@"$MASTER_PUBLIC_IP" << EOF
 sudo useradd -m -s /bin/bash ansadmin || true
 echo 'ansadmin ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/ansadmin
 sudo mkdir -p /home/ansadmin/.ssh
@@ -83,9 +81,10 @@ sudo chown -R ansadmin:ansadmin /home/ansadmin/.ssh
 sudo chmod 700 /home/ansadmin/.ssh
 sudo chmod 600 /home/ansadmin/.ssh/authorized_keys
 EOF
-                """
-            }
-        }
+        ''', environment: [SSH_KEY: env.SSH_KEY, MASTER_PUBLIC_IP: env.MASTER_PUBLIC_IP, PUBLIC_KEY: PUBLIC_KEY])
+    }
+}
+
     }
 }
 
