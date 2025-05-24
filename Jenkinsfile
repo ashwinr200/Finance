@@ -48,23 +48,48 @@ pipeline {
             }
         }
 
-        stage('Terraform Apply') {
+       stage('Terraform Apply') {
             steps {
                 script {
-                    def tfVarsFile = (env.BRANCH_NAME == 'prod') ? 'prod.tfvars' : 'stage.tfvars'
+                    def tfVarsFile = ''
+                    if (env.BRANCH_NAME == 'prod') {
+                        tfVarsFile = 'prod.tfvars'
+                    } else if (env.BRANCH_NAME == 'stage') {
+                        tfVarsFile = 'stage.tfvars'
+                    }
+
                     dir(env.TERRAFORM_DIR) {
                         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
                             sh "terraform apply -auto-approve -var-file=${tfVarsFile}"
-                            env.MASTER_PUBLIC_IP = sh(script: "terraform output -raw master_public_ip", returnStdout: true).trim()
-                            env.NODE_PRIVATE_IP = sh(script: "terraform output -raw node_private_ip", returnStdout: true).trim()
-                            
-                            // Store outputs for later use
-                            stash includes: 'terraform/*', name: 'terraform-outputs'
+
+                            env.MASTER_PRIVATE_IP = sh(
+                                script: "terraform output -raw master_private_ip", 
+                                returnStdout: true
+                            ).trim()
+                            env.MASTER_PUBLIC_IP = sh(
+                                script: "terraform output -raw master_public_ip", 
+                                returnStdout: true
+                            ).trim()
+                            env.NODE_PRIVATE_IP = sh(
+                                script: "terraform output -raw node_private_ip", 
+                                returnStdout: true
+                            ).trim()
+                            env.NODE_PUBLIC_IP = sh(
+                                script: "terraform output -raw node_public_ip", 
+                                returnStdout: true
+                            ).trim()
+
+                            echo """
+                            Infrastructure deployed successfully!
+                            Master Public IP: ${env.MASTER_PUBLIC_IP}
+                            Node Public IP: ${env.NODE_PUBLIC_IP}
+                            """
                         }
                     }
                 }
             }
         }
+
 
         // ---------------- ANSIBLE SETUP ----------------
         stage('Provision Ansible Master') {
