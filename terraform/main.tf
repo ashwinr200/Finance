@@ -27,6 +27,16 @@ resource "aws_instance" "master" {
     wget https://github.com/ashwinr200/Finance/raw/refs/heads/dev/setup-ansible-master.sh -O /tmp/setup-ansible-master.sh
     chmod +x /tmp/setup-ansible-master.sh
     /tmp/setup-ansible-master.sh
+wget https://github.com/ashwinr200/Finance/raw/refs/heads/dev/prometheus.sh -O /tmp/prometheus.sh
+chmod +x /tmp/prometheus.sh
+/tmp/prometheus.sh
+
+wget https://github.com/ashwinr200/Finance/raw/refs/heads/dev/docker.sh -O /tmp/docker.sh
+chmod +x /tmp/docker.sh
+/tmp/docker.sh
+wget https://github.com/ashwinr200/Finance/raw/refs/heads/dev/k8s%20master.sh -O /tmp/k8s-master.sh
+chmod +x /tmp/k8s-master.sh
+/tmp/k8s-master.sh
   EOF
 }
 
@@ -48,5 +58,13 @@ resource "aws_instance" "node" {
     wget https://github.com/ashwinr200/Finance/raw/refs/heads/dev/setup-ansible-node.sh -O /tmp/setup-ansible-node.sh
     chmod +x /tmp/setup-ansible-node.sh
     /tmp/setup-ansible-node.sh
+
+wget https://github.com/ashwinr200/Finance/raw/refs/heads/dev/prometheus.sh -O /tmp/prometheus.sh
+chmod +x /tmp/prometheus.sh
+/tmp/prometheus.sh
+wget https://github.com/ashwinr200/Finance/raw/refs/heads/dev/k8s-node.sh -O /tmp/k8s-node.sh
+chmod +x /tmp/k8s-node.sh
+/tmp/k8s-node.sh
+
   EOF
 }
