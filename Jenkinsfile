@@ -193,10 +193,12 @@ EOF
 stage('Install Prerequisites on Node') {
     steps {
         withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadmin1', keyFileVariable: 'SSH_KEY')]) {
-            sh '''
+sh '''
 ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${env.NODE_PUBLIC_IP} << 'EOF'
+bash << "SCRIPT"
 set -xe
 
+# Apt lock handling
 max_wait=300
 waited=0
 while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || sudo fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do
@@ -212,6 +214,8 @@ done
 
 sudo apt-get update
 sudo apt-get install -y dos2unix wget curl
+
+SCRIPT
 EOF
 '''
         }
