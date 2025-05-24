@@ -404,11 +404,13 @@ localhost ansible_connection=local ansible_user=ansadmin
                 """
             }
         }
-    }
-}
+    
+    }}
+
     post {
         always {
             cleanWs()
         }
     }
+}
 }
