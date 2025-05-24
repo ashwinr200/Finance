@@ -103,14 +103,10 @@ pipeline {
                         ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${env.MASTER_PUBLIC_IP} << 'EOF'
                        set -xe
 
-                        if sudo fuser /var/lib/apt/lists/lock >/dev/null 2>&1; then
-    echo "Killing stuck apt processes and cleaning locks..."
-    sudo killall apt apt-get || true
-    sudo rm -f /var/lib/apt/lists/lock
-    sudo rm -f /var/cache/apt/archives/lock
-    sudo rm -f /var/lib/dpkg/lock*
-    sudo dpkg --configure -a
-  fi 
+                          while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || sudo fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do
+    echo "Waiting for other apt processes to finish..."
+    sleep 5
+  done
 sudo apt-get update && sudo apt-get install -y dos2unix wget curl
 
 # Download and run ansible master setup script
@@ -150,14 +146,10 @@ sudo /tmp/k8s-master.sh
                     sh """
                         ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${env.NODE_PUBLIC_IP} << 'EOF'
                         set -xe
-                         if sudo fuser /var/lib/apt/lists/lock >/dev/null 2>&1; then
-    echo "Killing stuck apt processes and cleaning locks..."
-    sudo killall apt apt-get || true
-    sudo rm -f /var/lib/apt/lists/lock
-    sudo rm -f /var/cache/apt/archives/lock
-    sudo rm -f /var/lib/dpkg/lock*
-    sudo dpkg --configure -a
-  fi
+                         while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || sudo fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do
+    echo "Waiting for other apt processes to finish..."
+    sleep 5
+  done
 
                         sudo apt-get update && sudo apt-get install -y dos2unix wget curl
 
