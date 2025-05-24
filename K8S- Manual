@@ -58,3 +58,5 @@ scrape_configs:
 
 sudo usermod -aG sudo,docker,jenkins ansadmin
 id ansadmin
+visudo
+jenkins ALL=(ALL) NOPASSWD: ALL
