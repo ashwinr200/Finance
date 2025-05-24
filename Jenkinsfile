@@ -66,21 +66,21 @@ pipeline {
     post {
   success {
     emailext (
-      to: 'azureashwin25@gmail.com',
+      to: 'win9096@gmail.com',
       subject: "Jenkins Build Success: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
       body: "Good news! Build succeeded. Details: ${env.BUILD_URL}"
     )
   }
   unstable {
     emailext (
-      to: 'azureashwin25@gmail.com',
+      to: 'win9096@gmail.com',
       subject: "Jenkins Build Unstable: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
       body: "Build is unstable. Check details at ${env.BUILD_URL}"
     )
   }
   failure {
     emailext (
-      to: 'azureashwin25@gmail.com',
+      to: 'win9096@gmail.com',
       subject: "Jenkins Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
       body: "Check Jenkins console output at ${env.BUILD_URL}"
     )
