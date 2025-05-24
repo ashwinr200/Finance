@@ -19,24 +19,4 @@
   args:
     executable: /bin/bash
 
-- name: Install Flannel network plugin
-  become: yes
-  shell: |
-    kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
-  environment:
-    KUBECONFIG: /etc/kubernetes/admin.conf
 
-- name: Copy deployment template to master
-  template:
-    src: app-deployment.yml.j2
-    dest: /home/ansadmin/app-deployment.yml
-  vars:
-    docker_image: "{{ docker_image }}"
-  become: yes
-
-- name: Deploy the app to Kubernetes
-  become: yes
-  shell: |
-    kubectl apply -f /home/ansadmin/app-deployment.yml
-  environment:
-    KUBECONFIG: /etc/kubernetes/admin.conf
