@@ -83,6 +83,11 @@ else
   echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config.d/60-cloudimg-settings.conf
 fi
 
+# Restart sshd to apply config changes
+systemctl restart ssh
+
+# Wait 30 seconds before instance is ready for SSH
+sleep 5
 
 EOF
 }
