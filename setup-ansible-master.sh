@@ -31,9 +31,9 @@ systemctl restart ssh || service ssh restart
 echo "ansadmin ALL=(ALL:ALL) NOPASSWD:ALL" | EDITOR='tee -a' visudo
 
 # Step 5: Generate SSH key for ansadmin (if not already present)
-if [ ! -f /home/ansadmin/.ssh/id_rsa ]; then
-    su - ansadmin -c "mkdir -p ~/.ssh && ssh-keygen -t rsa -N '' -f ~/.ssh/id_rsa"
-fi
+#if [ ! -f /home/ansadmin/.ssh/id_rsa ]; then
+ #   su - ansadmin -c "mkdir -p ~/.ssh && ssh-keygen -t rsa -N '' -f ~/.ssh/id_rsa"
+#fi
 
 echo "==== Master setup complete ===="
 echo "Next: Run 'ssh-copy-id ansadmin@<node_private_ip>' from this master"
