@@ -92,32 +92,37 @@ pipeline {
 
 
         // ---------------- ANSIBLE SETUP ----------------
-        stage('Provision Ansible Master') {
+                stage('Install Tools on Master (Docker, Ansible, K8s, Prometheus)') {
             steps {
                 withCredentials([sshUserPrivateKey(
                     credentialsId: 'ssh-key-ansadmin1',
                     keyFileVariable: 'SSH_KEY'
                 )]) {
-                    script {
-                        // Generate public key safely
-                        def PUBLIC_KEY = sh(script: "ssh-keygen -y -f ${SSH_KEY} | head -n 1", returnStdout: true).trim()
+                    sh """
+                        ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${env.MASTER_PUBLIC_IP} << 'EOF'
+                        set -x
 
-                        // Setup ansadmin user with proper error handling
-                        sh """
-                            ssh -o StrictHostKeyChecking=no -i "${SSH_KEY}" ubuntu@${env.MASTER_PUBLIC_IP} << 'EOF'
-                            sudo useradd -m -s /bin/bash ansadmin || true
-                            echo 'ansadmin ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/ansadmin
-                            sudo mkdir -p /home/ansadmin/.ssh
-                            echo '${PUBLIC_KEY}' | sudo tee /home/ansadmin/.ssh/authorized_keys
-                            sudo chown -R ansadmin:ansadmin /home/ansadmin/.ssh
-                            sudo chmod 700 /home/ansadmin/.ssh
-                            sudo chmod 600 /home/ansadmin/.ssh/authorized_keys
+                        wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/setup-ansible-master.sh -O /tmp/setup-ansible-master.sh
+                        chmod +x /tmp/setup-ansible-master.sh
+                        /tmp/setup-ansible-master.sh
+
+                        wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/prometheus.sh -O /tmp/prometheus.sh
+                        chmod +x /tmp/prometheus.sh
+                        /tmp/prometheus.sh
+
+                        wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/docker.sh -O /tmp/docker.sh
+                        chmod +x /tmp/docker.sh
+                        /tmp/docker.sh
+
+                        wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/k8s%20master.sh -O /tmp/k8s-master.sh
+                        chmod +x /tmp/k8s-master.sh
+                        /tmp/k8s-master.sh
 EOF
-                        """
-                    }
+                    """
                 }
             }
         }
+
 
      
         stage('Configure Ansible Environment') {
