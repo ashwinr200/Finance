@@ -156,8 +156,20 @@ EOF
                     sh '''
                         ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${env.NODE_PUBLIC_IP} << 'EOF'
                         set -xe
-                        sudo apt-get install -y dos2unix wget curl
-
+                      max_wait=300
+waited=0
+while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || sudo fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do
+  echo "$(date): Waiting for apt lock..."
+  sleep 5
+  waited=$((waited+5))
+  if [ $waited -ge $max_wait ]; then
+    echo "$(date): Timeout waiting for apt lock. Killing other apt processes..."
+    sudo killall apt apt-get 2>/dev/null || true
+    break
+  fi
+done
+sudo apt-get update
+sudo apt-get install -y dos2unix wget curl
                         # Download and run Ansible node setup script
                         sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/setup-ansible-node.sh -O /tmp/setup-ansible-node.sh
                         sudo dos2unix /tmp/setup-ansible-node.sh
