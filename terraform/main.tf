@@ -9,6 +9,7 @@ data "aws_subnets" "selected" {
   }
 }
 
+
 resource "aws_instance" "master" {
   ami                         = var.ami_id
   instance_type               = var.instance_type
@@ -16,6 +17,12 @@ resource "aws_instance" "master" {
   vpc_security_group_ids      = [var.security_group_id]
   key_name                    = var.key_name
   associate_public_ip_address = true
+
+ root_block_device {
+    volume_size = 30            # Increase to 30 GB
+    volume_type = "gp3"
+    delete_on_termination = true
+  }
 
   tags = {
     Name = "${var.env}_master"
@@ -52,6 +59,12 @@ resource "aws_instance" "node" {
   vpc_security_group_ids      = [var.security_group_id]
   key_name                    = var.key_name
   associate_public_ip_address = true
+
+ root_block_device {
+    volume_size = 30            # Increase to 30 GB
+    volume_type = "gp3"
+    delete_on_termination = true
+  }
 
   tags = {
     Name = "${var.env}_node"
