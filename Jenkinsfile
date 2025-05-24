@@ -227,7 +227,7 @@ stage('Join Node to Kubernetes Master') {
 
                 // Run join command on the node
                 sh """
-                ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ansadmin@${env.NODE_PUBLIC_IP} '
+                ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ansadmin@${env.NODE_PRIVATE_IP} '
                     sudo ${fullJoinCommand}
                 '
                 """
