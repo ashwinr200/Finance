@@ -203,19 +203,7 @@ stage('Provision Ansible Master') {
     }
 }
 
-        stage('Configure SSH Access to Node') {
-            steps {
-                sshagent(['ssh-key-ansadmin1']) {
-                    sh """
-                        ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
-                            ssh-keygen -t rsa -f ~/.ssh/id_rsa -N "" -q
-                            ssh-keyscan -H ${env.NODE_PRIVATE_IP} >> ~/.ssh/known_hosts
-                            sshpass -p "ansadmin" ssh-copy-id -i ~/.ssh/id_rsa.pub ansadmin@${env.NODE_PRIVATE_IP} || true
-                        '
-                    """
-                }
-            }
-        }
+        
 stage('Join Node to Kubernetes Master') {
     steps {
         withCredentials([sshUserPrivateKey(
