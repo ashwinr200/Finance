@@ -189,6 +189,87 @@ EOF
     }
 }
 
+ stage('Provision Ansible Master') {
+            steps {
+                withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadmin1', keyFileVariable: 'SSH_KEY')]) {
+                    script {
+                        def publicKey = sh(script: "ssh-keygen -y -f ${SSH_KEY}", returnStdout: true).trim()
+                        
+                        sh(script: """ssh -o StrictHostKeyChecking=no -i "${SSH_KEY}" ubuntu@${env.MASTER_PUBLIC_IP} bash -c '
+                            sudo useradd -m -s /bin/bash ansadmin || true
+                            echo "ansadmin ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/ansadmin
+                            sudo mkdir -p /home/ansadmin/.ssh
+                            echo "${publicKey}" | sudo tee /home/ansadmin/.ssh/authorized_keys
+                            sudo chown -R ansadmin:ansadmin /home/ansadmin/.ssh
+                            sudo chmod 700 /home/ansadmin/.ssh
+                            sudo chmod 600 /home/ansadmin/.ssh/authorized_keys
+                        '""")
+                    }
+                }
+            }
+        }
+
+        stage('Configure Ansible Environment') {
+            steps {
+                sshagent(credentials: ['ssh-key-ansadmin1']) {
+                    sh """
+                        # First create the Ansible directory structure
+                        ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
+                            sudo mkdir -p /etc/ansible &&
+                            sudo chown ansadmin:ansadmin /etc/ansible
+                        '
+                    
+                        # Now configure the files
+                        ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} "
+                            echo -e '[all]\\n${env.NODE_PRIVATE_IP}' | sudo tee /etc/ansible/hosts
+                            echo -e '[defaults]\\nhost_key_checking = False' | sudo tee /etc/ansible/ansible.cfg
+                            sudo chmod 644 /etc/ansible/*
+                        "
+                        
+                        # Verify the configuration
+                        ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
+                            ls -la /etc/ansible/
+                            cat /etc/ansible/hosts
+                            cat /etc/ansible/ansible.cfg
+                        '
+                    """
+                }
+            }
+        }
+
+        stage('Join Node to Kubernetes Master') {
+            steps {
+                withCredentials([sshUserPrivateKey(
+                    credentialsId: 'ssh-key-ansadmin1',
+                    keyFileVariable: 'SSH_KEY'
+                )]) {
+                    script {
+                        // Fetch join command from master
+                        def joinCommand = sh(
+                            script: """
+                            ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ansadmin@${env.MASTER_PUBLIC_IP} '
+                                sudo kubeadm token create --print-join-command
+                            '
+                            """,
+                            returnStdout: true
+                        ).trim()
+
+                        // Append CRI socket path
+                        def fullJoinCommand = "${joinCommand} --cri-socket unix:///var/run/cri-dockerd.sock"
+                        echo "Executing on node: ${fullJoinCommand}"
+
+                        // Run join command on the node
+                        sh """
+                        ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ansadmin@${env.NODE_PRIVATE_IP} '
+                            sudo ${fullJoinCommand}
+                        '
+                        """
+                    }
+                }
+            }
+        }
+
+
 stage('Install Prerequisites on Node') {
     steps {
         withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadmin1', keyFileVariable: 'SSH_KEY')]) {
@@ -272,86 +353,7 @@ EOF
     }
 }
 
-        stage('Provision Ansible Master') {
-            steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadmin1', keyFileVariable: 'SSH_KEY')]) {
-                    script {
-                        def publicKey = sh(script: "ssh-keygen -y -f ${SSH_KEY}", returnStdout: true).trim()
-                        
-                        sh(script: """ssh -o StrictHostKeyChecking=no -i "${SSH_KEY}" ubuntu@${env.MASTER_PUBLIC_IP} bash -c '
-                            sudo useradd -m -s /bin/bash ansadmin || true
-                            echo "ansadmin ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/ansadmin
-                            sudo mkdir -p /home/ansadmin/.ssh
-                            echo "${publicKey}" | sudo tee /home/ansadmin/.ssh/authorized_keys
-                            sudo chown -R ansadmin:ansadmin /home/ansadmin/.ssh
-                            sudo chmod 700 /home/ansadmin/.ssh
-                            sudo chmod 600 /home/ansadmin/.ssh/authorized_keys
-                        '""")
-                    }
-                }
-            }
-        }
-
-        stage('Configure Ansible Environment') {
-            steps {
-                sshagent(credentials: ['ssh-key-ansadmin1']) {
-                    sh """
-                        # First create the Ansible directory structure
-                        ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
-                            sudo mkdir -p /etc/ansible &&
-                            sudo chown ansadmin:ansadmin /etc/ansible
-                        '
-                    
-                        # Now configure the files
-                        ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} "
-                            echo -e '[all]\\n${env.NODE_PRIVATE_IP}' | sudo tee /etc/ansible/hosts
-                            echo -e '[defaults]\\nhost_key_checking = False' | sudo tee /etc/ansible/ansible.cfg
-                            sudo chmod 644 /etc/ansible/*
-                        "
-                        
-                        # Verify the configuration
-                        ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
-                            ls -la /etc/ansible/
-                            cat /etc/ansible/hosts
-                            cat /etc/ansible/ansible.cfg
-                        '
-                    """
-                }
-            }
-        }
-
-        stage('Join Node to Kubernetes Master') {
-            steps {
-                withCredentials([sshUserPrivateKey(
-                    credentialsId: 'ssh-key-ansadmin1',
-                    keyFileVariable: 'SSH_KEY'
-                )]) {
-                    script {
-                        // Fetch join command from master
-                        def joinCommand = sh(
-                            script: """
-                            ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ansadmin@${env.MASTER_PUBLIC_IP} '
-                                sudo kubeadm token create --print-join-command
-                            '
-                            """,
-                            returnStdout: true
-                        ).trim()
-
-                        // Append CRI socket path
-                        def fullJoinCommand = "${joinCommand} --cri-socket unix:///var/run/cri-dockerd.sock"
-                        echo "Executing on node: ${fullJoinCommand}"
-
-                        // Run join command on the node
-                        sh """
-                        ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ansadmin@${env.NODE_PRIVATE_IP} '
-                            sudo ${fullJoinCommand}
-                        '
-                        """
-                    }
-                }
-            }
-        }
-
+       
         stage('Write Ansible Inventory') {
             steps {
                 sshagent(['ssh-key-ansadmin1']) {
