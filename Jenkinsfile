@@ -66,29 +66,29 @@ pipeline {
 
         // ---------------- ANSIBLE SETUP ----------------
 
-        stage('Provision Ansible Master') {
-            steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadmin1', keyFileVariable: 'SSH_KEY', usernameVariable: 'ansadmin')]) {
-                    script {
-                        // Extract public key from the private key
-                        def PUBLIC_KEY = sh(script: "ssh-keygen -y -f ${SSH_KEY}", returnStdout: true).trim()
+       stage('Provision Ansible Master') {
+    steps {
+        withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadmin1', keyFileVariable: 'SSH_KEY')]) {
+            script {
+                def PUBLIC_KEY = sh(script: "ssh-keygen -y -f ${SSH_KEY}", returnStdout: true).trim()
 
-                        // Provision ansadmin on remote EC2
-                        sh """
-                            ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${MASTER_PUBLIC_IP} << 'ENDSSH'
-                                sudo useradd -m -s /bin/bash ansadmin || true
-                                echo 'ansadmin ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/ansadmin
-                                sudo mkdir -p /home/ansadmin/.ssh
-                                echo '${PUBLIC_KEY}' | sudo tee /home/ansadmin/.ssh/authorized_keys
-                                sudo chown -R ansadmin:ansadmin /home/ansadmin/.ssh
-                                sudo chmod 700 /home/ansadmin/.ssh
-                                sudo chmod 600 /home/ansadmin/.ssh/authorized_keys
-                            ENDSSH
-                        """
-                    }
-                }
+                // Use double quotes on the heredoc and escape variables properly
+                sh """
+                ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${MASTER_PUBLIC_IP} << EOF
+sudo useradd -m -s /bin/bash ansadmin || true
+echo 'ansadmin ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/ansadmin
+sudo mkdir -p /home/ansadmin/.ssh
+echo "${PUBLIC_KEY}" | sudo tee /home/ansadmin/.ssh/authorized_keys
+sudo chown -R ansadmin:ansadmin /home/ansadmin/.ssh
+sudo chmod 700 /home/ansadmin/.ssh
+sudo chmod 600 /home/ansadmin/.ssh/authorized_keys
+EOF
+                """
             }
         }
+    }
+}
+
 
         stage('Install Ansible') {
             steps {
