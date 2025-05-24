@@ -406,7 +406,7 @@ localhost ansible_connection=local ansible_user=ansadmin
             }
         }
     }
-    }
+    
 
         stage('Build with Maven') {
     steps {
@@ -458,7 +458,7 @@ stage('Push Docker Image from Master') {
 }
 
     
-
+        }
   
     post {
         always {
