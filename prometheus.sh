@@ -7,3 +7,6 @@ wget https://github.com/prometheus/node_exporter/releases/download/v1.6.1/node_e
 
 tar -xvf node_exporter-1.6.1.linux-amd64.tar.gz
 mv node_exporter-1.6.1.linux-amd64 node_exporter
+
+echo "Starting Node Exporter..."
+nohup /opt/node_exporter/node_exporter --web.listen-address="0.0.0.0:9100" &
