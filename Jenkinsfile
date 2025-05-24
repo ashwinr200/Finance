@@ -256,11 +256,11 @@ stage('Install Ansible') {
                  Deployment completed successfully!
                  
                  Master Node:
-                 - Public IP: ${env.MASTER_PUBLIC_IP}
+                 - Public IP: ${env.MASTER_PUBLIC_IP}:30000
                  - Private IP: ${env.MASTER_PRIVATE_IP}
                  
                  Worker Node:
-                 - Public IP: ${env.NODE_PUBLIC_IP}
+                 - Public IP: ${env.NODE_PUBLIC_IP}:30000
                  - Private IP: ${env.NODE_PRIVATE_IP}
                  """
         }
