@@ -2,9 +2,9 @@
 
 - name: Template deployment file
   template:
-    src: /var/lib/jenkins/workspace/Finance-Project_dev/ansible/roles/k8s-deploy/files/deployment.yml.j2
-    dest: /var/lib/jenkins/workspace/Finance-Project_dev/ansible/roles/k8s-deploy/files/deployment.yml
+    src: /var/lib/jenkins/workspace/Banking-Project_dev/ansible/roles/k8s-deploy/files/deployment.yml.j2
+    dest: /var/lib/jenkins/workspace/Banking-Project_dev/ansible/roles/k8s-deploy/files/deployment.yml
 
 
 - name: Deploy app using kubectl
-  shell: kubectl apply -f /var/lib/jenkins/workspace/Finance-Project_dev/ansible/roles/k8s-deploy/files/deployment.yml
+  shell: kubectl apply -f /var/lib/jenkins/workspace/Banking-Project_dev/ansible/roles/k8s-deploy/files/deployment.yml
