@@ -91,15 +91,110 @@ pipeline {
             }
         }
 
-        // ---------------- ANSIBLE SETUP ----------------
-        stage('Install Tools on Master (Docker, Ansible, K8s, Prometheus)') {
-            steps {
-                withCredentials([sshUserPrivateKey(
-                    credentialsId: 'ssh-key-ansadmin1',
-                    keyFileVariable: 'SSH_KEY'
-                )]) {
-                    sh '''
+    // ---------------- ANSIBLE SETUP ----------------
+stage('Install Prerequisites on Master') {
+    steps {
+        withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadmin1', keyFileVariable: 'SSH_KEY')]) {
+            sh '''
 ssh -o StrictHostKeyChecking=no -i ''' + SSH_KEY + ''' ubuntu@''' + env.MASTER_PUBLIC_IP + ''' << 'EOF'
+set -xe
+
+# Wait for apt lock
+max_wait=300
+waited=0
+while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || sudo fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do
+  echo "$(date): Waiting for apt lock..."
+  sleep 5
+  waited=$((waited+5))
+  if [ $waited -ge $max_wait ]; then
+    echo "$(date): Timeout waiting for apt lock. Killing other apt processes..."
+    sudo killall apt apt-get 2>/dev/null || true
+    break
+  fi
+done
+
+sudo apt-get update
+sudo apt-get install -y dos2unix wget curl
+EOF
+'''
+        }
+    }
+}
+
+stage('Install Ansible on Master') {
+    steps {
+        withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadmin1', keyFileVariable: 'SSH_KEY')]) {
+            sh '''
+ssh -o StrictHostKeyChecking=no -i ''' + SSH_KEY + ''' ubuntu@''' + env.MASTER_PUBLIC_IP + ''' << 'EOF'
+set -xe
+
+sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/setup-ansible-master.sh -O /tmp/setup-ansible-master.sh
+sudo dos2unix /tmp/setup-ansible-master.sh
+sudo chmod +x /tmp/setup-ansible-master.sh
+sudo /tmp/setup-ansible-master.sh
+EOF
+'''
+        }
+    }
+}
+
+stage('Install Prometheus on Master') {
+    steps {
+        withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadmin1', keyFileVariable: 'SSH_KEY')]) {
+            sh '''
+ssh -o StrictHostKeyChecking=no -i ''' + SSH_KEY + ''' ubuntu@''' + env.MASTER_PUBLIC_IP + ''' << 'EOF'
+set -xe
+
+sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/prometheus.sh -O /tmp/prometheus.sh
+sudo dos2unix /tmp/prometheus.sh
+sudo chmod +x /tmp/prometheus.sh
+sudo /tmp/prometheus.sh
+EOF
+'''
+        }
+    }
+}
+
+stage('Install Docker on Master') {
+    steps {
+        withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadmin1', keyFileVariable: 'SSH_KEY')]) {
+            sh '''
+ssh -o StrictHostKeyChecking=no -i ''' + SSH_KEY + ''' ubuntu@''' + env.MASTER_PUBLIC_IP + ''' << 'EOF'
+set -xe
+
+sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/docker.sh -O /tmp/docker.sh
+sudo dos2unix /tmp/docker.sh
+sudo chmod +x /tmp/docker.sh
+sudo /tmp/docker.sh
+EOF
+'''
+        }
+    }
+}
+
+stage('Install Kubernetes Master on Master') {
+    steps {
+        withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadmin1', keyFileVariable: 'SSH_KEY')]) {
+            sh '''
+ssh -o StrictHostKeyChecking=no -i ''' + SSH_KEY + ''' ubuntu@''' + env.MASTER_PUBLIC_IP + ''' << 'EOF'
+set -xe
+
+sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/k8s%20master.sh -O /tmp/k8s-master.sh
+sudo dos2unix /tmp/k8s-master.sh
+sudo chmod +x /tmp/k8s-master.sh
+sudo /tmp/k8s-master.sh
+EOF
+'''
+        }
+    }
+}
+
+// ---------------- NODE SETUP ----------------
+stage('Install Prerequisites on Node') {
+    steps {
+        withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadmin1', keyFileVariable: 'SSH_KEY')]) {
+            sh '''
+ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${env.NODE_PUBLIC_IP} << 'EOF'
 set -xe
 
 max_wait=300
@@ -114,84 +209,65 @@ while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || sudo fuser /var/
     break
   fi
 done
-# Proceed once lock is released
+
 sudo apt-get update
 sudo apt-get install -y dos2unix wget curl
+EOF
+'''
+        }
+    }
+}
 
-# Download and run ansible master setup script
-sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/setup-ansible-master.sh -O /tmp/setup-ansible-master.sh
-sudo dos2unix /tmp/setup-ansible-master.sh
-sudo chmod +x /tmp/setup-ansible-master.sh
-sudo /tmp/setup-ansible-master.sh
+stage('Install Ansible on Node') {
+    steps {
+        withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadmin1', keyFileVariable: 'SSH_KEY')]) {
+            sh '''
+ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${env.NODE_PUBLIC_IP} << 'EOF'
+set -xe
 
-# Download and run Prometheus install script
+sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/setup-ansible-node.sh -O /tmp/setup-ansible-node.sh
+sudo dos2unix /tmp/setup-ansible-node.sh
+sudo chmod +x /tmp/setup-ansible-node.sh
+sudo /tmp/setup-ansible-node.sh
+EOF
+'''
+        }
+    }
+}
+
+stage('Install Prometheus on Node') {
+    steps {
+        withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadmin1', keyFileVariable: 'SSH_KEY')]) {
+            sh '''
+ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${env.NODE_PUBLIC_IP} << 'EOF'
+set -xe
+
 sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/prometheus.sh -O /tmp/prometheus.sh
 sudo dos2unix /tmp/prometheus.sh
 sudo chmod +x /tmp/prometheus.sh
 sudo /tmp/prometheus.sh
-
-# Download and run Docker install script
-sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/docker.sh -O /tmp/docker.sh
-sudo dos2unix /tmp/docker.sh
-sudo chmod +x /tmp/docker.sh
-sudo /tmp/docker.sh
-
-# Download and run Kubernetes master install script
-sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/k8s%20master.sh -O /tmp/k8s-master.sh
-sudo dos2unix /tmp/k8s-master.sh
-sudo chmod +x /tmp/k8s-master.sh
-sudo /tmp/k8s-master.sh
 EOF
 '''
-                }
-            }
         }
+    }
+}
 
-        stage('Install Tools on Node (Ansible, Prometheus, K8s)') {
-            steps {
-                withCredentials([sshUserPrivateKey(
-                    credentialsId: 'ssh-key-ansadmin1',
-                    keyFileVariable: 'SSH_KEY'
-                )]) {
-                    sh '''
-                        ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${env.NODE_PUBLIC_IP} << 'EOF'
-                        set -xe
-                      max_wait=300
-waited=0
-while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || sudo fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do
-  echo "$(date): Waiting for apt lock..."
-  sleep 5
-  waited=$((waited+5))
-  if [ $waited -ge $max_wait ]; then
-    echo "$(date): Timeout waiting for apt lock. Killing other apt processes..."
-    sudo killall apt apt-get 2>/dev/null || true
-    break
-  fi
-done
-sudo apt-get update
-sudo apt-get install -y dos2unix wget curl
-                        # Download and run Ansible node setup script
-                        sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/setup-ansible-node.sh -O /tmp/setup-ansible-node.sh
-                        sudo dos2unix /tmp/setup-ansible-node.sh
-                        sudo chmod +x /tmp/setup-ansible-node.sh
-                        sudo /tmp/setup-ansible-node.sh
+stage('Install Kubernetes Node') {
+    steps {
+        withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadmin1', keyFileVariable: 'SSH_KEY')]) {
+            sh '''
+ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${env.NODE_PUBLIC_IP} << 'EOF'
+set -xe
 
-                        # Download and run Prometheus setup script
-                        sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/prometheus.sh -O /tmp/prometheus.sh
-                        sudo dos2unix /tmp/prometheus.sh
-                        sudo chmod +x /tmp/prometheus.sh
-                        sudo /tmp/prometheus.sh
-
-                        # Download and run Kubernetes node setup script
-                        sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/k8s-node.sh -O /tmp/k8s-node.sh
-                        sudo dos2unix /tmp/k8s-node.sh
-                        sudo chmod +x /tmp/k8s-node.sh
-                        sudo /tmp/k8s-node.sh
-                        EOF
-                    '''
-                }
-            }
+sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/k8s-node.sh -O /tmp/k8s-node.sh
+sudo dos2unix /tmp/k8s-node.sh
+sudo chmod +x /tmp/k8s-node.sh
+sudo /tmp/k8s-node.sh
+EOF
+'''
         }
+    }
+}
 
         stage('Provision Ansible Master') {
             steps {
