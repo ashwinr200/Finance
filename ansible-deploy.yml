@@ -18,15 +18,11 @@
       template:
         src:  /tmp/Finance/ansible/roles/k8s-deploy/files/prometheus.yml.j2
         dest: "{{ prometheus_config_path }}"
-        owner: prometheus
-        group: prometheus
+        
+        
         mode: '0644'
       vars:
         master_ip: "{{ master_ip }}"
         node_ip: "{{ node_ip }}"
 
-    - name: Restart Prometheus service to apply new config
-      systemd:
-        name: prometheus
-        state: restarted
-        enabled: yes
+   
