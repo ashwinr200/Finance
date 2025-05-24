@@ -343,39 +343,39 @@ stage('Provision ansadmin on Node') {
     }
 }
 
-        stage('Join Node to Kubernetes Master') {
-            steps {
-                withCredentials([sshUserPrivateKey(
-                    credentialsId: 'ssh-key-ansadmin1',
-                    keyFileVariable: 'SSH_KEY'
-                )]) {
-                    script {
-                        // Fetch join command from master
-                        def joinCommand = sh(
-                            script: """
-                            ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ansadmin@${env.MASTER_PUBLIC_IP} '
-                                sudo kubeadm token create --print-join-command
-                            '
-                            """,
-                            returnStdout: true
-                        ).trim()
-
-                        // Append CRI socket path
-                        def fullJoinCommand = "${joinCommand} --cri-socket unix:///var/run/cri-dockerd.sock"
-                        echo "Executing on node: ${fullJoinCommand}"
-
-                        // Run join command on the node
-                        sh """
-                        ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ansadmin@${env.NODE_PRIVATE_IP} '
-                            sudo ${fullJoinCommand}
+    stage('Join Node to Kubernetes Master') {
+    steps {
+        withCredentials([sshUserPrivateKey(
+            credentialsId: 'ssh-key-ansadmin1',
+            keyFileVariable: 'SSH_KEY'
+        )]) {
+            script {
+                // Fetch join command from master
+                def joinCommand = sh(
+                    script: """
+                        ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ansadmin@${env.MASTER_PUBLIC_IP} '
+                            sudo kubeadm token create --print-join-command
                         '
-                        """
-                    }
-                }
+                    """,
+                    returnStdout: true
+                ).trim()
+
+                // Append CRI socket path
+                def fullJoinCommand = "${joinCommand} --cri-socket unix:///var/run/cri-dockerd.sock"
+                echo "Executing on node: ${fullJoinCommand}"
+
+                // Run join command on the node
+                sh """
+                    ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ansadmin@${env.NODE_PRIVATE_IP} '
+                        sudo ${fullJoinCommand}
+                    '
+                """
             }
         }
+    }
+}
 
-        stage('Write Ansible Inventory') {
+stage('Write Ansible Inventory') {
     steps {
         sshagent(['ssh-key-ansadmin1']) {
             script {
@@ -392,7 +392,6 @@ ansible_user=ansadmin
 localhost ansible_connection=local ansible_user=ansadmin
 """
 
-                // Properly escape the content for SSH command
                 def escapedContent = inventoryContent
                     .replace('\\', '\\\\')
                     .replace('"', '\\"')
@@ -406,15 +405,15 @@ localhost ansible_connection=local ansible_user=ansadmin
             }
         }
     }
-    
+}
 
-        stage('Build with Maven') {
+stage('Build with Maven') {
     steps {
         sh 'mvn clean package'
     }
 }
 
-       stage('Build Docker Image on Master') {
+stage('Build Docker Image on Master') {
     steps {
         sshagent(['ssh-key-ansadmin1']) {
             sh """
@@ -442,9 +441,7 @@ stage('Push Docker Image from Master') {
     }
 }
 
-
-
-        stage('Run Ansible on Master') {
+stage('Run Ansible on Master') {
     steps {
         sshagent(['ssh-key-ansadmin1']) {
             sh """
@@ -455,14 +452,13 @@ stage('Push Docker Image from Master') {
             """
         }
     }
-}
+} 
+    }
 
-    
-        }
-  
-    post {
-        always {
-            cleanWs()
-        }
+post {
+    always {
+        cleanWs()
     }
 }
+
+       
