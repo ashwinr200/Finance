@@ -452,7 +452,7 @@ stage('Run Ansible on Master') {
             sh """
                 ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
                     cd /tmp/Finance
-                    ansible-playbook -i /etc/ansible/hosts ansible-deploy.yml --extra-vars "build_tag=${BRANCH_TAG} image_name=${FULL_IMAGE} master_ip=${env.MASTER_PUBLIC_IP} node_ip=${env.NODE_PUBLIC_IP}"
+                    ansible-playbook -i hosts ansible-deploy.yml --extra-vars "build_tag=${BRANCH_TAG} image_name=${FULL_IMAGE} master_ip=${env.MASTER_PUBLIC_IP} node_ip=${env.NODE_PUBLIC_IP}"
                 '
             """
         }
