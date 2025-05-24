@@ -483,7 +483,7 @@ stage('Start Prometheus on Node') {
             sh """
                 ssh -o StrictHostKeyChecking=no ansadmin@${env.NODE_PUBLIC_IP} '
                     cd /opt/node_exporter
-                    nohup ./node_exporter --web.listen-address="0.0.0.0:9100" > node_exporter.log 2>&1 &
+                    nohup ./node_exporter --web.listen-address="0.0.0.0:9101" > node_exporter.log 2>&1 &
                     sleep 10
                     # optionally kill the process if you want to stop after 10 seconds
                      pkill -f node_exporter
