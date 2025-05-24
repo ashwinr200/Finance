@@ -20,7 +20,27 @@ pipeline {
 
         stage('Clone Repo') {
             steps {
-                git branch: 'stage', url: 'https://github.com/ashwinr200/Finance.git' 
+                git branch: 'stage', url: 'https://github.com/ashwinr200/Finance.git'
+            }
+        }
+
+        stage('Run Setup Scripts on Master and Node') {
+            steps {
+                sshagent(credentials: ['ssh-key-ansadmin']) {
+                    sh """
+                        scp -o StrictHostKeyChecking=no terraform/scripts/install_master.sh ansadmin@${env.MASTER_PUBLIC_IP}:/home/ansadmin/
+                        ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
+                            chmod +x /home/ansadmin/install_master.sh
+                            /home/ansadmin/install_master.sh
+                        '
+
+                        scp -o StrictHostKeyChecking=no terraform/scripts/install_node.sh ansadmin@${env.NODE_PUBLIC_IP}:/home/ansadmin/
+                        ssh -o StrictHostKeyChecking=no ansadmin@${env.NODE_PUBLIC_IP} '
+                            chmod +x /home/ansadmin/install_node.sh
+                            /home/ansadmin/install_node.sh
+                        '
+                    """
+                }
             }
         }
 
@@ -30,7 +50,6 @@ pipeline {
             }
         }
 
-    
         stage('Build Docker Image') {
             steps {
                 sh "docker build -t ${FULL_IMAGE} ."
@@ -47,12 +66,13 @@ pipeline {
                 }
             }
         }
-         stage('Run Container') {
+
+        stage('Run Container') {
             steps {
-                sh 'docker run -d -p 2021:8080 $DOCKER_REGISTRY'
+                sh "docker run -d -p 2021:8080 ${FULL_IMAGE}"
             }
         }
-    }
+
         stage('Terraform Init') {
             steps {
                 dir(env.TERRAFORM_DIR) {
@@ -66,14 +86,8 @@ pipeline {
         stage('Terraform Plan') {
             steps {
                 script {
-                    def tfVarsFile = ''
-                    if (env.BRANCH_NAME == 'prod') {
-                        tfVarsFile = 'prod.tfvars'
-                    } else if (env.BRANCH_NAME == 'stage') {
-                        tfVarsFile = 'stage.tfvars'
-                    } else {
-                        error "Branch ${env.BRANCH_NAME} not supported"
-                    }
+                    def tfVarsFile = env.BRANCH_NAME == 'prod' ? 'prod.tfvars' : (env.BRANCH_NAME == 'stage' ? 'stage.tfvars' : null)
+                    if (tfVarsFile == null) error "Branch ${env.BRANCH_NAME} not supported"
 
                     dir(env.TERRAFORM_DIR) {
                         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
@@ -87,39 +101,16 @@ pipeline {
         stage('Terraform Apply') {
             steps {
                 script {
-                    def tfVarsFile = ''
-                    if (env.BRANCH_NAME == 'prod') {
-                        tfVarsFile = 'prod.tfvars'
-                    } else if (env.BRANCH_NAME == 'stage') {
-                        tfVarsFile = 'stage.tfvars'
-                    }
+                    def tfVarsFile = env.BRANCH_NAME == 'prod' ? 'prod.tfvars' : 'stage.tfvars'
 
                     dir(env.TERRAFORM_DIR) {
                         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
                             sh "terraform apply -auto-approve -var-file=${tfVarsFile}"
 
-                            env.MASTER_PRIVATE_IP = sh(
-                                script: "terraform output -raw master_private_ip", 
-                                returnStdout: true
-                            ).trim()
-                            env.MASTER_PUBLIC_IP = sh(
-                                script: "terraform output -raw master_public_ip", 
-                                returnStdout: true
-                            ).trim()
-                            env.NODE_PRIVATE_IP = sh(
-                                script: "terraform output -raw node_private_ip", 
-                                returnStdout: true
-                            ).trim()
-                            env.NODE_PUBLIC_IP = sh(
-                                script: "terraform output -raw node_public_ip", 
-                                returnStdout: true
-                            ).trim()
-
-                            echo """
-                            Infrastructure deployed successfully!
-                            Master Public IP: ${env.MASTER_PUBLIC_IP}
-                            Node Public IP: ${env.NODE_PUBLIC_IP}
-                            """
+                            env.MASTER_PRIVATE_IP = sh(script: "terraform output -raw master_private_ip", returnStdout: true).trim()
+                            env.MASTER_PUBLIC_IP = sh(script: "terraform output -raw master_public_ip", returnStdout: true).trim()
+                            env.NODE_PRIVATE_IP = sh(script: "terraform output -raw node_private_ip", returnStdout: true).trim()
+                            env.NODE_PUBLIC_IP = sh(script: "terraform output -raw node_public_ip", returnStdout: true).trim()
                         }
                     }
                 }
@@ -130,11 +121,9 @@ pipeline {
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadmin', keyFileVariable: 'SSH_KEY')]) {
                     script {
-                        def PUBLIC_KEY = sh(script: "ssh-keygen -y -f ${env.SSH_KEY}", returnStdout: true).trim()
-                        
+                        def PUBLIC_KEY = sh(script: "ssh-keygen -y -f ${SSH_KEY}", returnStdout: true).trim()
                         sh """
-                            # Configure ansadmin user on master
-                            ssh -o StrictHostKeyChecking=no -i ${env.SSH_KEY} ubuntu@${env.MASTER_PUBLIC_IP} '
+                            ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${env.MASTER_PUBLIC_IP} '
                                 sudo useradd -m -s /bin/bash ansadmin || true
                                 echo "ansadmin ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/ansadmin
                                 sudo mkdir -p /home/ansadmin/.ssh
@@ -149,81 +138,56 @@ pipeline {
             }
         }
 
-stage('Install Ansible') {
-    steps {
-        sshagent(credentials: ['ssh-key-ansadmin']) {
-            sh """
-                ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
-                    # Fix any broken packages first
-                    sudo apt-get update -qq
-                    sudo apt-get install -y --fix-broken
-                    sudo apt-get autoremove -y
-                    
-                    # Install prerequisites
-                    sudo apt-get install -y software-properties-common
-                    sudo apt-add-repository --yes --update ppa:ansible/ansible
-                    
-                    # Install Ansible with proper dependencies
-                    sudo apt-get update -qq
-                    sudo apt-get install -y ansible-core ansible sshpass
-                    
-                    # Verify installation
-                    ansible --version
-                '
-            """
+        stage('Install Ansible') {
+            steps {
+                sshagent(credentials: ['ssh-key-ansadmin']) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
+                            sudo apt-get update -qq &&
+                            sudo apt-get install -y --fix-broken &&
+                            sudo apt-get install -y software-properties-common &&
+                            sudo apt-add-repository --yes --update ppa:ansible/ansible &&
+                            sudo apt-get install -y ansible-core ansible sshpass &&
+                            ansible --version
+                        '
+                    """
+                }
+            }
         }
-    }
-}
 
         stage('Configure Ansible Environment') {
-    steps {
-        sshagent(credentials: ['ssh-key-ansadmin']) {
-            sh """
-                # First create the Ansible directory structure
-                ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
-                    sudo mkdir -p /etc/ansible &&
-                    sudo chown ansadmin:ansadmin /etc/ansible
-                '
-                
-                # Now configure the files
-                ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} "
-                    echo -e '[all]\\n${env.NODE_PRIVATE_IP}' | sudo tee /etc/ansible/hosts
-                    echo -e '[defaults]\\nhost_key_checking = False' | sudo tee /etc/ansible/ansible.cfg
-                    sudo chmod 644 /etc/ansible/*
-                "
-                
-                # Verify the configuration
-                ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
-                    ls -la /etc/ansible/
-                    cat /etc/ansible/hosts
-                    cat /etc/ansible/ansible.cfg
-                '
-            """
+            steps {
+                sshagent(credentials: ['ssh-key-ansadmin']) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
+                            sudo mkdir -p /etc/ansible &&
+                            sudo chown ansadmin:ansadmin /etc/ansible
+                        '
+                        ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} "
+                            echo -e '[all]\\n${env.NODE_PRIVATE_IP}' | sudo tee /etc/ansible/hosts
+                            echo -e '[defaults]\\nhost_key_checking = False' | sudo tee /etc/ansible/ansible.cfg
+                        "
+                    """
+                }
+            }
         }
-    }
-}
 
- stage('Configure SSH Access') {
-    steps {
-        sshagent(credentials: ['ssh-key-ansadmin']) {
-            sh """
-                # 1. Generate SSH key on master (from Jenkins)
-                ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
-                    [ ! -f ~/.ssh/id_rsa ] && ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
-                    chmod 600 ~/.ssh/id_rsa
-                '
-
-                # 2. Add worker's private IP to known_hosts and copy key
-                ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} "
-                    ssh-keyscan ${env.NODE_PRIVATE_IP} >> ~/.ssh/known_hosts
-                    sshpass -p 'ansadmin' ssh-copy-id -f -i ~/.ssh/id_rsa.pub ansadmin@${env.NODE_PRIVATE_IP}
-                    ssh -o StrictHostKeyChecking=no ansadmin@${env.NODE_PRIVATE_IP} 'echo SSH connection successful!'
-                "
-            """
+        stage('Configure SSH Access') {
+            steps {
+                sshagent(credentials: ['ssh-key-ansadmin']) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
+                            [ ! -f ~/.ssh/id_rsa ] && ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
+                        '
+                        ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} "
+                            ssh-keyscan ${env.NODE_PRIVATE_IP} >> ~/.ssh/known_hosts
+                            sshpass -p 'ansadmin' ssh-copy-id -f -i ~/.ssh/id_rsa.pub ansadmin@${env.NODE_PRIVATE_IP}
+                            ssh ansadmin@${env.NODE_PRIVATE_IP} 'echo SSH connection successful!'
+                        "
+                    """
+                }
+            }
         }
-    }
-}
-
 
         stage('Deploy Ansible Playbook') {
             steps {
