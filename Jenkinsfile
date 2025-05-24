@@ -119,20 +119,7 @@ EOF
             }
         }
 
-        stage('Install Ansible') {
-            steps {
-                sshagent(['ssh-key-ansadmin1']) {
-                    sh """
-                        ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
-                            sudo apt-get install -y software-properties-common
-                            sudo apt-add-repository --yes --update ppa:ansible/ansible
-                            sudo apt-get install -y ansible-core ansible sshpass
-                        '
-                    """
-                }
-            }
-        }
-
+     
         stage('Configure Ansible Environment') {
             steps {
                 sshagent(['ssh-key-ansadmin1']) {
