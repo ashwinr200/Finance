@@ -18,7 +18,8 @@ pipeline {
 
         stage('Clone Repo') {
             steps {
-                git branch: 'dev', url: 'https://github.com/ashwinr200/Finance.git'
+                git branch: 'stage', url: 'https://github.com/ashwinr200/Finance.git'
+                sh 
             }
         }
 
