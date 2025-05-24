@@ -407,44 +407,56 @@ localhost ansible_connection=local ansible_user=ansadmin
         }
     }
     }
+
         stage('Build with Maven') {
-            steps {
-                sh 'mvn clean package'
-            }
-        }
-
-        stage('Build Docker Image') {
-            steps {
-                sh "docker build -t ${FULL_IMAGE} ."
-            }
-        }
-
-        stage('Push to Docker Hub') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds-id', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-                    sh """
-                        echo "$PASSWORD" | docker login -u "$USERNAME" --password-stdin
-                        docker push ${FULL_IMAGE}
-                    """
-                }
-            }
-        }
-
-
-        stage('Deploy to Kubernetes via Ansible') {
-            steps {
-                ansiblePlaybook credentialsId: 'ssh-key-ansadm', 
-                                installation: 'ansible2', 
-                                inventory: '/etc/ansible/hosts', 
-                                playbook: 'ansible-deploy.yml', 
-                                vaultTmpPath: '',
-                     extraVars: [
-                            build_tag: "${BRANCH_TAG}",
-                            image_name: "${FULL_IMAGE}"
-                        ]
-               
-            }  }
+    steps {
+        sh 'mvn clean package'
     }
+}
+
+       stage('Build Docker Image on Master') {
+    steps {
+        sshagent(['ssh-key-ansadmin1']) {
+            sh """
+                ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
+                    cd /home/ansadmin/project &&
+                    docker build -t ${FULL_IMAGE} .
+                '
+            """
+        }
+    }
+}
+
+stage('Push Docker Image from Master') {
+    steps {
+        sshagent(['ssh-key-ansadmin1']) {
+            withCredentials([usernamePassword(credentialsId: 'dockerhub-creds-id', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                sh """
+                    ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
+                        echo "$PASSWORD" | docker login -u "$USERNAME" --password-stdin &&
+                        docker push ${FULL_IMAGE}
+                    '
+                """
+            }
+        }
+    }
+}
+
+
+
+        stage('Run Ansible on Master') {
+    steps {
+        sshagent(['ssh-key-ansadmin1']) {
+            sh """
+                ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
+                    cd /etc/ansible &&
+                    ansible-playbook -i hosts ansible-deploy.yml --extra-vars "build_tag=${BRANCH_TAG} image_name=${FULL_IMAGE}"
+                '
+            """
+        }
+    }
+}
+
     
 
   
