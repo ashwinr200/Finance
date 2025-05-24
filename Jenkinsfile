@@ -5,8 +5,10 @@ pipeline {
         AWS_DEFAULT_REGION = 'us-east-1'
         TERRAFORM_DIR = 'terraform'
         ANSIBLE_DIR = 'ansible'
-        IMAGE_NAME = 'finance-stage'
-      DOCKER_REGISTRY = 'ashwinr2001/financedev18may2025capstone:v1'
+        IMAGE_NAME = 'financestage'
+        DOCKER_USER = 'ashwinr2001'
+        BRANCH_TAG = "${env.BRANCH_NAME}-${env.BUILD_NUMBER}".replaceAll('/', '-')
+        FULL_IMAGE = "${DOCKER_USER}/${IMAGE_NAME}:${BRANCH_TAG}"
     }
 
     stages {
@@ -29,11 +31,10 @@ pipeline {
             }
         }
 
+    
         stage('Build Docker Image') {
             steps {
-                script {
-                    sh "docker build -t ${DOCKER_REGISTRY} ."
-                }
+                sh "docker build -t ${FULL_IMAGE} ."
             }
         }
 
@@ -42,7 +43,7 @@ pipeline {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-creds-id', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                     sh """
                         echo "$PASSWORD" | docker login -u "$USERNAME" --password-stdin
-                        docker push ${DOCKER_REGISTRY}
+                        docker push ${FULL_IMAGE}
                     """
                 }
             }
