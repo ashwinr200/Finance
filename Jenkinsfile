@@ -140,24 +140,27 @@ sudo /tmp/k8s-master.sh
                 )]) {
                     sh """
                         ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${env.NODE_PUBLIC_IP} << 'EOF'
-                        set -x
+                        set -xe
 
-                        # Download and run Ansible node setup
-                        sudo apt-get update && apt-get install -y dos2unix
-                        wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/setup-ansible-node.sh -O /tmp/setup-ansible-node.sh
-                        chmod +x /tmp/setup-ansible-node.sh
-                        sudo dos2unix /tmp/setup-ansible-node.sh
-                        /tmp/setup-ansible-node.sh
+                        sudo apt-get update && sudo apt-get install -y dos2unix wget curl
 
-                        # Download and run Prometheus setup
-                        wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/prometheus.sh -O /tmp/prometheus.sh
-                        chmod +x /tmp/prometheus.sh
-                        /tmp/prometheus.sh
+# Download and run Ansible node setup script
+sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/setup-ansible-node.sh -O /tmp/setup-ansible-node.sh
+sudo dos2unix /tmp/setup-ansible-node.sh
+sudo chmod +x /tmp/setup-ansible-node.sh
+sudo /tmp/setup-ansible-node.sh
 
-                        # Download and run K8s node setup
-                        wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/k8s-node.sh -O /tmp/k8s-node.sh
-                        chmod +x /tmp/k8s-node.sh
-                        /tmp/k8s-node.sh
+# Download and run Prometheus setup script
+sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/prometheus.sh -O /tmp/prometheus.sh
+sudo dos2unix /tmp/prometheus.sh
+sudo chmod +x /tmp/prometheus.sh
+sudo /tmp/prometheus.sh
+
+# Download and run Kubernetes node setup script
+sudo wget -q https://github.com/ashwinr200/Finance/raw/refs/heads/dev/k8s-node.sh -O /tmp/k8s-node.sh
+sudo dos2unix /tmp/k8s-node.sh
+sudo chmod +x /tmp/k8s-node.sh
+sudo /tmp/k8s-node.sh
 EOF
                     """
                 }
