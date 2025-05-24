@@ -11,7 +11,7 @@ pipeline {
         FULL_IMAGE = "${DOCKER_USER}/${IMAGE_NAME}:${BRANCH_TAG}"
         ENVIRONMENT = "${env.BRANCH_NAME == 'prod' ? 'prod' : 'stage'}"
     }
-
+stages{
         // ---------------- INFRA ----------------
         stage('Terraform Init') {
             steps {
@@ -465,5 +465,5 @@ post {
         cleanWs()
     }
 }
-
+}
 
