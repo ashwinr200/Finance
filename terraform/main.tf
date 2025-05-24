@@ -45,10 +45,15 @@ apt-get update -y
 apt-get install -y --fix-broken
 apt-get autoremove -y
 
+while sudo fuser /var/lib/dpkg/lock >/dev/null 2>&1; do
+  echo "Waiting for other apt processes to finish..."
+  sleep 5
+done
+
+
 # Install Ansible properly
 apt-get install -y software-properties-common
 apt-add-repository --yes --update ppa:ansible/ansible
-apt-get update -y
 apt-get install -y ansible-core ansible sshpass
 
 # Configure basic ansible settings
