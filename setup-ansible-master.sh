@@ -8,7 +8,7 @@ apt-get install -y software-properties-common
 apt-add-repository -y ppa:ansible/ansible
 apt-get update -y
 apt-get install -y ansible
-
+apt-get install -y ansible-core
 # Step 2: Create user 'ansadmin' if not exists
 if ! id -u ansadmin >/dev/null 2>&1
 then
