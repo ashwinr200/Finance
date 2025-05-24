@@ -7,3 +7,26 @@
     build_tag: "{{ lookup('env','BUILD_TAG') | default('latest') }}"
   roles:
     - k8s-deploy
+
+- name: Update Prometheus config on master and node
+  hosts: all
+  become: yes
+  vars:
+    prometheus_config_path: /opt/prometheus/prometheus.yml
+  tasks:
+    - name: Template prometheus.yml with master and node IPs
+      template:
+        src:  /tmp/Finance/ansible/roles/k8s-deploy/files/prometheus.yml.j2
+        dest: "{{ prometheus_config_path }}"
+        owner: prometheus
+        group: prometheus
+        mode: '0644'
+      vars:
+        master_ip: "{{ master_ip }}"
+        node_ip: "{{ node_ip }}"
+
+    - name: Restart Prometheus service to apply new config
+      systemd:
+        name: prometheus
+        state: restarted
+        enabled: yes
