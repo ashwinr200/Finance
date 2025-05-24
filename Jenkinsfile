@@ -25,7 +25,6 @@ pipeline {
         }
 
         // ---------------- INFRA ----------------
-
         stage('Terraform Init') {
             steps {
                 dir(env.TERRAFORM_DIR) {
@@ -58,46 +57,36 @@ pipeline {
                             sh "terraform apply -auto-approve -var-file=${tfVarsFile}"
                             env.MASTER_PUBLIC_IP = sh(script: "terraform output -raw master_public_ip", returnStdout: true).trim()
                             env.NODE_PRIVATE_IP = sh(script: "terraform output -raw node_private_ip", returnStdout: true).trim()
+                            
+                            // Store outputs for later use
+                            stash includes: 'terraform/*', name: 'terraform-outputs'
                         }
                     }
                 }
             }
         }
-stage('Test SSH Key') {
+
+        // ---------------- ANSIBLE SETUP ----------------
+        stage('Provision Ansible Master') {
             steps {
                 withCredentials([sshUserPrivateKey(
                     credentialsId: 'ssh-key-ansadmin1',
                     keyFileVariable: 'SSH_KEY'
                 )]) {
-                    // WARNING: Prints private key! Use only for debugging.
-                    sh 'cat $SSH_KEY > /tmp/debug_key && chmod 600 /tmp/debug_key'
-                    sh 'ssh -vvv -i /tmp/debug_key ansadmin@18.209.105.116'
-                }
-            }
-        }
-        // ---------------- ANSIBLE SETUP ----------------
-
-        stage('Provision Ansible Master') {
-            steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadmin1', keyFileVariable: 'SSH_KEY')]) {
                     script {
-                        // Extract public key from the private key file
-                        def PUBLIC_KEY = sh(script: "ssh-keygen -y -f ${SSH_KEY}", returnStdout: true).trim()
+                        // Generate public key safely
+                        def PUBLIC_KEY = sh(script: "ssh-keygen -y -f ${SSH_KEY} | head -n 1", returnStdout: true).trim()
 
-                        // Run ssh commands to create ansadmin user and setup SSH keys on master node
+                        // Setup ansadmin user with proper error handling
                         sh """
-                            export SSH_KEY='${SSH_KEY}'
-                            export MASTER_IP='${env.MASTER_PUBLIC_IP}'
-                            export PUBLIC_KEY='${PUBLIC_KEY}'
-
-                            ssh -o StrictHostKeyChecking=no -i "\$SSH_KEY" ubuntu@"\$MASTER_IP" << EOF
-sudo useradd -m -s /bin/bash ansadmin || true
-echo 'ansadmin ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/ansadmin
-sudo mkdir -p /home/ansadmin/.ssh
-echo "\$PUBLIC_KEY" | sudo tee /home/ansadmin/.ssh/authorized_keys
-sudo chown -R ansadmin:ansadmin /home/ansadmin/.ssh
-sudo chmod 700 /home/ansadmin/.ssh
-sudo chmod 600 /home/ansadmin/.ssh/authorized_keys
+                            ssh -o StrictHostKeyChecking=no -i "${SSH_KEY}" ubuntu@${env.MASTER_PUBLIC_IP} << 'EOF'
+                            sudo useradd -m -s /bin/bash ansadmin || true
+                            echo 'ansadmin ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/ansadmin
+                            sudo mkdir -p /home/ansadmin/.ssh
+                            echo '${PUBLIC_KEY}' | sudo tee /home/ansadmin/.ssh/authorized_keys
+                            sudo chown -R ansadmin:ansadmin /home/ansadmin/.ssh
+                            sudo chmod 700 /home/ansadmin/.ssh
+                            sudo chmod 600 /home/ansadmin/.ssh/authorized_keys
 EOF
                         """
                     }
@@ -107,7 +96,7 @@ EOF
 
         stage('Install Ansible') {
             steps {
-                sshagent(credentials: ['ssh-key-ansadmin1']) {
+                sshagent(['ssh-key-ansadmin1']) {
                     sh """
                         ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
                             sudo apt-get update -qq
@@ -122,7 +111,7 @@ EOF
 
         stage('Configure Ansible Environment') {
             steps {
-                sshagent(credentials: ['ssh-key-ansadmin1']) {
+                sshagent(['ssh-key-ansadmin1']) {
                     sh """
                         ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
                             sudo mkdir -p /etc/ansible
@@ -130,6 +119,7 @@ EOF
                             echo "${env.NODE_PRIVATE_IP}" | sudo tee -a /etc/ansible/hosts
                             echo "[defaults]" | sudo tee /etc/ansible/ansible.cfg
                             echo "host_key_checking = False" | sudo tee -a /etc/ansible/ansible.cfg
+                            echo "remote_user = ansadmin" | sudo tee -a /etc/ansible/ansible.cfg
                         '
                     """
                 }
@@ -138,12 +128,12 @@ EOF
 
         stage('Configure SSH Access to Node') {
             steps {
-                sshagent(credentials: ['ssh-key-ansadmin1']) {
+                sshagent(['ssh-key-ansadmin1']) {
                     sh """
                         ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
-                            ssh-keygen -t rsa -f ~/.ssh/id_rsa -N "" || true
-                            ssh-keyscan ${env.NODE_PRIVATE_IP} >> ~/.ssh/known_hosts
-                            sshpass -p "ansadmin" ssh-copy-id -f -i ~/.ssh/id_rsa.pub ansadmin@${env.NODE_PRIVATE_IP}
+                            ssh-keygen -t rsa -f ~/.ssh/id_rsa -N "" -q
+                            ssh-keyscan -H ${env.NODE_PRIVATE_IP} >> ~/.ssh/known_hosts
+                            sshpass -p "ansadmin" ssh-copy-id -i ~/.ssh/id_rsa.pub ansadmin@${env.NODE_PRIVATE_IP} || true
                         '
                     """
                 }
@@ -151,24 +141,27 @@ EOF
         }
 
         // ---------------- BUILD & DEPLOY ----------------
-
         stage('Build with Maven') {
             steps {
-                sh 'mvn clean package'
+                sh 'mvn clean package -DskipTests'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh "docker build -t ${FULL_IMAGE} ."
+                sh "docker build --no-cache -t ${FULL_IMAGE} ."
             }
         }
 
         stage('Push to Docker Hub') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds-id', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds-id', 
+                    usernameVariable: 'DOCKER_USERNAME', 
+                    passwordVariable: 'DOCKER_PASSWORD'
+                )]) {
                     sh """
-                        echo "$PASSWORD" | docker login -u "$USERNAME" --password-stdin
+                        echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
                         docker push ${FULL_IMAGE}
                     """
                 }
@@ -177,12 +170,12 @@ EOF
 
         stage('Deploy Ansible Playbook') {
             steps {
-                sshagent(credentials: ['ssh-key-ansadmin1']) {
+                sshagent(['ssh-key-ansadmin1']) {
                     sh """
                         scp -o StrictHostKeyChecking=no -r ${env.ANSIBLE_DIR}/ ansadmin@${env.MASTER_PUBLIC_IP}:/home/ansadmin/
                         ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
                             cd /home/ansadmin/${env.ANSIBLE_DIR}
-                            ansible-playbook -i /etc/ansible/hosts install.yml
+                            ansible-playbook -i /etc/ansible/hosts install.yml -e "docker_image=${FULL_IMAGE}"
                         '
                     """
                 }
@@ -208,9 +201,11 @@ EOF
 
                  Master Node:
                  - Public IP: ${env.MASTER_PUBLIC_IP}
+                 - SSH: ssh ansadmin@${env.MASTER_PUBLIC_IP}
 
                  Worker Node:
                  - Private IP: ${env.NODE_PRIVATE_IP}
+                 - Docker Image: ${FULL_IMAGE}
                  """
         }
     }
