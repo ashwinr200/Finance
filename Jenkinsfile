@@ -68,7 +68,7 @@ pipeline {
 
         stage('Provision Ansible Master') {
             steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadmin', keyFileVariable: 'SSH_KEY')]) {
+                withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-ansadmin1', keyFileVariable: 'SSH_KEY')]) {
                     script {
                         def PUBLIC_KEY = sh(script: "ssh-keygen -y -f ${env.SSH_KEY}", returnStdout: true).trim()
                         sh """
