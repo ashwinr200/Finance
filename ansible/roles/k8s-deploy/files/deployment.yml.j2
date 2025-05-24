@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: finance-container
-        image: ashwinr2001/financestage:{{ build_tag }}
+        image: image: "{{ image_name }}"
         ports:
         - containerPort: 8081
 ---
