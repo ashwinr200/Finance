@@ -151,8 +151,8 @@ EOF
                     credentialsId: 'ssh-key-ansadmin1',
                     keyFileVariable: 'SSH_KEY'
                 )]) {
-                    sh """
-                        ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${env.NODE_PUBLIC_IP} << EOF
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${env.NODE_PUBLIC_IP} << 'EOF'
                         set -xe
                         max_wait=300
                         waited=0
@@ -186,7 +186,7 @@ EOF
                         sudo chmod +x /tmp/k8s-node.sh
                         sudo /tmp/k8s-node.sh
                         EOF
-                    """
+                    '''
                 }
             }
         }
