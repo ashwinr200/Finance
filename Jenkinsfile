@@ -423,7 +423,6 @@ stage('Build Docker Image on Master') {
         sshagent(['ssh-key-ansadmin1']) {
             sh """
                 ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
-                sudo usermod -aG docker ansadmin
                     cd /tmp/Finance &&
                     docker build -t ${FULL_IMAGE} .
                 '
