@@ -12,19 +12,6 @@ pipeline {
         ENVIRONMENT = "${env.BRANCH_NAME == 'prod' ? 'prod' : 'stage'}"
     }
 
-    stages {
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
-
-        stage('Clone Repo') {
-            steps {
-                git branch: 'stage', url: 'https://github.com/ashwinr200/Finance.git'
-            }
-        }
-
         // ---------------- INFRA ----------------
         stage('Terraform Init') {
             steps {
@@ -406,10 +393,28 @@ localhost ansible_connection=local ansible_user=ansadmin
         }
     }
 }
-
-stage('Build with Maven') {
+stage('Clone Repo on Master') {
     steps {
-        sh 'mvn clean package'
+        sshagent(['ssh-key-ansadmin1']) {
+            sh """
+                ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
+                    git clone -b stage https://github.com/ashwinr200/Finance.git /tmp/Finance
+                '
+            """
+        }
+    }
+}
+
+stage('Build with Maven on Master') {
+    steps {
+        sshagent(['ssh-key-ansadmin1']) {
+            sh """
+                ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
+                    cd /tmp/Finance &&
+                    mvn clean package
+                '
+            """
+        }
     }
 }
 
@@ -418,7 +423,7 @@ stage('Build Docker Image on Master') {
         sshagent(['ssh-key-ansadmin1']) {
             sh """
                 ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
-                    cd /home/ansadmin/project &&
+                    cd /tmp/Finance &&
                     docker build -t ${FULL_IMAGE} .
                 '
             """
@@ -447,14 +452,14 @@ stage('Run Ansible on Master') {
             sh """
                 ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
                     cd /etc/ansible &&
-                    ansible-playbook -i hosts ansible-deploy.yml --extra-vars "build_tag=${BRANCH_TAG} image_name=${FULL_IMAGE}"
+                    ansible-playbook -i hosts /tmp/Finance/ansible-deploy.yml --extra-vars "build_tag=${BRANCH_TAG} image_name=${FULL_IMAGE}"
                 '
             """
         }
     }
-} 
-    }
+}
 
+}
 post {
     always {
         cleanWs()
