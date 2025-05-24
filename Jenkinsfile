@@ -99,8 +99,8 @@ pipeline {
                     keyFileVariable: 'SSH_KEY'
                 )]) {
                     sh """
-                        ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${env.MASTER_PUBLIC_IP} << EOF
-                        set -xe
+ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${env.MASTER_PUBLIC_IP} << EOF
+set -xe
 
                         max_wait=300
                         waited=0
