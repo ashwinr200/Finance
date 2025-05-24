@@ -19,3 +19,5 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin 
 echo "Adding Jenkins user to Docker group..."
 sudo useradd -m -s /bin/bash jenkins
 sudo usermod -aG docker jenkins
+sudo usermod -aG docker ansadmin
+
