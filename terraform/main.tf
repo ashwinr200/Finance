@@ -23,10 +23,11 @@ resource "aws_instance" "master" {
   }
 
  user_data = <<-EOF
-wget https://github.com/ashwinr200/Finance/raw/refs/heads/dev/setup-ansible-master.sh -O /tmp/setup-ansible-master.sh
+    #!/bin/bash
+    wget https://github.com/ashwinr200/Finance/raw/refs/heads/dev/setup-ansible-master.sh -O /tmp/setup-ansible-master.sh
     chmod +x /tmp/setup-ansible-master.sh
     /tmp/setup-ansible-master.sh
-EOF
+  EOF
 }
 
 resource "aws_instance" "node" {
@@ -42,9 +43,10 @@ resource "aws_instance" "node" {
     Role = "node"
   }
 
-   user_data = <<-EOF
-wget https://github.com/ashwinr200/Finance/raw/refs/heads/dev/setup-ansible-node.sh -O /tmp/setup-ansible-node.sh
+ user_data = <<-EOF
+    #!/bin/bash
+    wget https://github.com/ashwinr200/Finance/raw/refs/heads/dev/setup-ansible-node.sh -O /tmp/setup-ansible-node.sh
     chmod +x /tmp/setup-ansible-node.sh
     /tmp/setup-ansible-node.sh
-EOF
+  EOF
 }
