@@ -1,4 +1,4 @@
-env               = "Finance_Prod"
+env               = "Finance-Prod"
 region            = "us-east-1"
 vpc_id            = "vpc-0cfe8a3337fe12ba2"
 security_group_id = "sg-0be99f4392cae1fd7"
