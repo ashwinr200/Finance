@@ -509,7 +509,7 @@ post {
             mail to: 'azureashwin25@gmail.com',
                  subject: "SUCCESS: Pipeline ${currentBuild.fullDisplayName}",
                  body: """
-                 Deployment completed successfully!
+                 PRODUCTION Deployment completed successfully!
                  
                  Master Node:
                  - Public IP: ${env.MASTER_PUBLIC_IP}:30000
