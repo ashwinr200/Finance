@@ -464,10 +464,10 @@ stage('Start Prometheus on Master') {
         sshagent(['ssh-key-ansadmin1']) {
             sh """
                 ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
-                   cd /opt/node_exporter
-                    nohup ./node_exporter --web.listen-address="0.0.0.0:9100" > node_exporter.log 2>&1 &
+                  cd /opt/node_exporter
+                    nohup ./node_exporter --web.listen-address="0.0.0.0:9100" &
                     cd /opt/prometheus
-                    nohup ./prometheus --config.file=/opt/prometheus/prometheus.yml > prometheus.log 2>&1 &
+                    nohup ./prometheus &
                 '
             """
         }
@@ -480,9 +480,9 @@ stage('Start Prometheus on Node') {
             sh """
                 ssh -o StrictHostKeyChecking=no ansadmin@${env.NODE_PUBLIC_IP} '
                     cd /opt/node_exporter
-                    nohup ./node_exporter --web.listen-address="0.0.0.0:9101" > node_exporter.log 2>&1  &
+                    nohup ./node_exporter --web.listen-address="0.0.0.0:9100" &
                     cd /opt/prometheus
-                    nohup ./prometheus --config.file=/opt/prometheus/prometheus.yml > prometheus.log 2>&1 &
+                    nohup ./prometheus &
                 '
             """
         }
