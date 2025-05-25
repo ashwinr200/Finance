@@ -463,6 +463,7 @@ stage('Start Prometheus on Master') {
     steps {
         sshagent(['ssh-key-ansadmin1']) {
             sh """
+              ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
                  cd /opt/node_exporter
   nohup ./node_exporter --web.listen-address="0.0.0.0:9100" > /tmp/node_exporter.log 2>&1 &
   cd /opt/prometheus
