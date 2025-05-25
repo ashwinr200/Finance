@@ -398,7 +398,7 @@ stage('Clone Repo on Master') {
         sshagent(['ssh-key-ansadmin1']) {
             sh """
                 ssh -o StrictHostKeyChecking=no ansadmin@${env.MASTER_PUBLIC_IP} '
-                    git clone -b stage https://github.com/ashwinr200/Finance.git /tmp/Finance
+                    git clone -b prod https://github.com/ashwinr200/Finance.git /tmp/Finance
                 '
             """
         }
