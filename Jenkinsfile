@@ -495,6 +495,31 @@ post {
     always {
         cleanWs()
     }
+    post {
+        always {
+            echo 'Pipeline completed - cleaning up workspace'
+            cleanWs()
+        }
+        failure {
+            mail to: 'azureashwin25@gmail.com',
+                 subject: "FAILED: Pipeline ${currentBuild.fullDisplayName}",
+                 body: "Check build ${env.BUILD_URL} for details"
+        }
+        success {
+            mail to: 'azureashwin25@gmail.com',
+                 subject: "SUCCESS: Pipeline ${currentBuild.fullDisplayName}",
+                 body: """
+                 Deployment completed successfully!
+                 
+                 Master Node:
+                 - Public IP: ${env.MASTER_PUBLIC_IP}:30000
+                 - Private IP: ${env.MASTER_PRIVATE_IP}
+                 - Prometheus : ${env.MASTER_PUBLIC_IP}: 9090
+                 
+                 Worker Node:
+                 - Public IP: ${env.NODE_PUBLIC_IP}:30000
+                 - Private IP: ${env.NODE_PRIVATE_IP}
+                 """
 }
 }
 
