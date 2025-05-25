@@ -25,7 +25,7 @@ resource "aws_instance" "master" {
   }
 
   tags = {
-    Name = "${var.env}_master"
+    Name = "${var.env}-Master"
     Role = "master"
   }
 
@@ -67,7 +67,7 @@ resource "aws_instance" "node" {
   }
 
   tags = {
-    Name = "${var.env}_node"
+    Name = "${var.env}-Node"
     Role = "node"
   }
 
