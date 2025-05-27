@@ -64,27 +64,24 @@ pipeline {
 
     }
     post {
-  success {
-    emailext (
-      to: 'win9096@gmail.com',
-      subject: "Jenkins Build Success: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-      body: "Good news! Build succeeded. Details: ${env.BUILD_URL}"
-    )
-  }
-  unstable {
-    emailext (
-      to: 'win9096@gmail.com',
-      subject: "Jenkins Build Unstable: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-      body: "Build is unstable. Check details at ${env.BUILD_URL}"
-    )
-  }
-  failure {
-    emailext (
-      to: 'win9096@gmail.com',
-      subject: "Jenkins Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-      body: "Check Jenkins console output at ${env.BUILD_URL}"
-    )
-  }
+    always {
+        echo 'Pipeline completed - cleaning up workspace'
+        cleanWs()
+    }
+    failure {
+        mail to: 'azureashwin25@gmail.com',
+             subject: "FAILED: Pipeline ${currentBuild.fullDisplayName}",
+             body: "Check build ${env.BUILD_URL} for details"
+    }
+    success {
+        mail to: 'azureashwin25@gmail.com',
+             subject: "SUCCESS: Pipeline ${currentBuild.fullDisplayName}",
+             body: """
+             Finance Devlopment Deployment completed successfully!
+
+           
+             """
+    }
 }
 }
 
