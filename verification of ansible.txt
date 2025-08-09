@@ -75,3 +75,20 @@ ansible -i /etc/ansible/hosts ansiblegroup -m ping -u ansadmin
 
 [all:vars]
 ansible_user=ansadmin
+
+
+
+
+------------- new one----------------
+
+ssh-keygen -t rsa -b 2048 -f ~/.ssh/ansadmin_key
+ssh-copy-id -i ~/.ssh/ansadmin_key.pub ansadmin@172.31.87.183
+
+[all]
+172.31.87.183
+
+[all:vars]
+ansible_user=ansadmin
+ansible_ssh_private_key_file=~/.ssh/ansadmin_key
+
+
