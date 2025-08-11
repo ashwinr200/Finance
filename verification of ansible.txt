@@ -81,15 +81,10 @@ ansible_user=ansadmin
 
 ------------- new one----------------
 
-ssh-keygen -t rsa -b 2048 -f ~/.ssh/ansadmin_key
-ssh-copy-id -i ~/.ssh/ansadmin_key.pub ansadmin@172.31.87.183
+mkdir -p ~/.ssh
 
-[all]
-172.31.87.183
-
-[all:vars]
-ansible_user=ansadmin
-ansible_ssh_private_key_file=~/.ssh/ansadmin_key
+# 2️⃣ Set correct permissions for security
+chmod 700 ~/.ssh
 
 
 ssh-keygen -t rsa -b 2048 -f ~/.ssh/ansadmin_key
@@ -101,6 +96,7 @@ ssh-copy-id -i ~/.ssh/ansadmin_key.pub ansadmin@172.31.87.183
 [all:vars]
 ansible_user=ansadmin
 ansible_ssh_private_key_file=~/.ssh/ansadmin_key
+
 
 
 
