@@ -42,6 +42,7 @@ promethus on each machine
 
 cd /opt/node_exporter
 ./node_exporter --web.listen-address="0.0.0.0:9100" &
+./prometheus --config.file=prometheus.yml &
 
 scrape_configs:
   - job_name: "prometheus"
