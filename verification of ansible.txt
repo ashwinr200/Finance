@@ -98,5 +98,7 @@ ansible_user=ansadmin
 ansible_ssh_private_key_file=~/.ssh/ansadmin_key
 
 
+ ssh -i ~/.ssh/ansadmin_key ansadmin@172.31.89.118
+
 
 
